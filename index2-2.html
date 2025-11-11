@@ -120,9 +120,9 @@
                         <div id="template-buttons" class="grid grid-cols-2 gap-2"></div>
                     </div>
                     
-                    <!-- (DIMODIFIKASI) Panel Mode List -->
+                    <!-- (DIMODIFIKASI BESAR) Panel Mode List -->
                     <div id="panel-list" class="hidden space-y-3">
-                        <!-- (BARU) Bagian URL Google Sheet -->
+                        <!-- Bagian URL Google Sheet (Tetap) -->
                         <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
                             <label for="list-sheet-url" class="text-sm font-semibold text-slate-700 block">URL Google Sheet (CSV)</label>
                             <input type="text" id="list-sheet-url" class="w-full p-2 border border-slate-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" placeholder="Tempel URL ...pub?output=csv">
@@ -136,6 +136,7 @@
                             </div>
                         </div>
 
+                        <!-- (MODIFIKASI) Status Batch dengan Timer -->
                         <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
                             <label class="text-sm font-semibold text-slate-700 block">Status Batch</label>
                             <p class="text-xs text-slate-500 mt-1 mb-2">Ambil daftar prompt dari Google Sheet.</p>
@@ -147,22 +148,77 @@
                                 <span class="text-xs font-medium text-slate-600">Sedang Berjalan:</span>
                                 <span id="list-current-prompt" class="font-bold text-slate-800 text-xs truncate">N/A</span>
                             </div>
+                            <!-- (BARU) Timer Countdown -->
+                            <div class="flex items-center justify-between mt-1">
+                                <span class="text-xs font-medium text-slate-600">Prompt Berikutnya:</span>
+                                <span id="list-countdown-time" class="font-bold text-cyan-600 text-xs">--</span>
+                            </div>
+                            <!-- (BARU) Timer Total Waktu -->
+                            <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-200">
+                                <span class="text-xs font-medium text-slate-600">Total Waktu Berjalan:</span>
+                                <span id="list-total-time" class="font-bold text-slate-800 text-xs">00:00:00</span>
+                            </div>
                             <button id="sync-list-btn" class="w-full mt-3 text-xs text-center py-1.5 px-3 rounded-md font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-colors">
                                 Sinkronisasi Daftar Prompt
                             </button>
                         </div>
-                        
-                        <div class="p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
-                            <label for="list-interval-time" class="text-xs font-medium text-slate-700 block mb-2">Interval Antar Prompt (detik)</label>
-                            <input type="number" id="list-interval-time" value="5" min="1" class="w-full p-2 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
-                        </div>
-                        
-                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                            <div class="flex items-center justify-between">
-                                <label for="list-auto-download" class="text-sm font-semibold text-slate-700">Unduh Otomatis</label>
-                                <input type="checkbox" id="list-auto-download" class="form-checkbox h-5 w-5 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500">
+                       
+
+                        <!-- (BARU) Grup 2: Pengaturan System (Accordion) -->
+                        <div class="space-y-3">
+                            
+                            <div class="border border-slate-200 rounded-lg bg-slate-50">
+                                <!-- Tombol Accordion -->
+                                <button id="system-accordion-btn" class="w-full flex justify-between items-center p-3 text-sm font-semibold text-slate-700">
+                                    <span>Pengaturan System</span>
+                                    <svg id="system-accordion-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-200"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </button>
+                                <!-- Konten Accordion -->
+                                <div id="system-accordion-content" class="hidden p-3 border-t border-slate-200 space-y-4">
+                                    <!-- Pengaturan Interval (Statis/Random) -->
+                                    <div>
+                                        <label for="list-interval-type" class="text-xs font-medium text-slate-700 block mb-2">Tipe Interval</label>
+                                        <select id="list-interval-type" class="w-full p-2 border border-slate-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                                            <option value="static">Statis (detik)</option>
+                                            <option value="random">Random (detik)</option>
+                                        </select>
+                                    </div>
+                                    <!-- Interval Statis -->
+                                    <div id="list-interval-static-container">
+                                        <label for="list-interval-time" class="text-xs font-medium text-slate-700 block mb-2">Interval Statis (detik)</label>
+                                        <input type="number" id="list-interval-time" value="5" min="1" class="w-full p-2 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                                    </div>
+                                    <!-- Interval Random -->
+                                    <div id="list-interval-random-container" class="hidden flex gap-2">
+                                        <div class="flex-1">
+                                            <label for="list-interval-min" class="text-xs font-medium text-slate-700 block mb-2">Min (detik)</label>
+                                            <input type="number" id="list-interval-min" value="5" min="1" class="w-full p-2 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                                        </div>
+                                        <div class="flex-1">
+                                            <label for="list-interval-max" class="text-xs font-medium text-slate-700 block mb-2">Max (detik)</label>
+                                            <input type="number" id="list-interval-max" value="30" min="1" class="w-full p-2 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Unduh Otomatis -->
+                                    <div class="pt-2 border-t border-slate-200">
+                                        <div class="flex items-center justify-between">
+                                            <label for="list-auto-download" class="text-sm font-semibold text-slate-700">Unduh Otomatis</label>
+                                            <input type="checkbox" id="list-auto-download" class="form-checkbox h-5 w-5 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500">
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-1">Unduh setiap gambar secara otomatis setelah selesai.</p>
+                                    </div>
+                                    
+                                    <!-- (BARU) Pengulangan -->
+                                    <div class="pt-2 border-t border-slate-200">
+                                        <div class="flex items-center justify-between">
+                                            <label for="list-repeat" class="text-sm font-semibold text-slate-700">Ulangi Batch</label>
+                                            <input type="checkbox" id="list-repeat" class="form-checkbox h-5 w-5 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500">
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-1">Ulangi daftar prompt dari awal setelah selesai.</p>
+                                    </div>
+                                </div>
                             </div>
-                            <p class="text-xs text-slate-500 mt-1">Unduh setiap gambar secara otomatis setelah selesai.</p>
                         </div>
                     </div>
                 </section>
@@ -179,7 +235,9 @@
                         </select>
                     </div>
                     
+                    <!-- (DIKEMBALIKAN) Container Jumlah Gambar & Rasio Aspek -->
                     <div class="flex gap-3">
+                        <!-- (DIKEMBALIKAN) Konten dipindahkan kembali ke sini dari #panel-list -->
                         <div id="image-count-container" class="flex-1 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
                             <label for="image-count" class="text-xs font-medium text-slate-700 block mb-2">Jumlah Gambar</label>
                             <input type="number" id="image-count" value="1" min="1" max="10" class="w-full p-2 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
@@ -205,7 +263,7 @@
                         <p class="text-xs text-slate-500 mt-2">Gunakan untuk mempertahankan bentuk objek utama</p>
                     </div>
 
-                    <!-- Style Reference with modern styling -->
+                    <!-- (DIKEMBALIKAN) Container Referensi Gaya -->
                     <div id="style-reference-container" class="p-3 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 hover:border-cyan-400 transition-colors">
                         <label for="upload-style" class="text-xs font-semibold text-slate-700 mb-2 block">Referensi Gaya</label>
                         <input type="file" id="upload-style" accept="image/*" multiple class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-cyan-500 file:text-white hover:file:bg-cyan-600 cursor-pointer">
@@ -213,6 +271,7 @@
                         <button id="clear-style" class="hidden text-xs text-red-500 hover:text-red-700 mt-2 w-full text-center font-medium">Hapus</button>
                         <p class="text-xs text-slate-500 mt-2">Gunakan untuk tone, warna, dan tekstur</p>
                     </div>
+                    
                 </section>
             </div>
 
@@ -305,13 +364,29 @@
             const listCurrentPrompt = document.getElementById('list-current-prompt');
             const listIntervalTime = document.getElementById('list-interval-time');
             const listAutoDownload = document.getElementById('list-auto-download');
+            // (BARU) DOM untuk Accordion, Interval Random, dan Repeat
+            const systemAccordionBtn = document.getElementById('system-accordion-btn');
+            const systemAccordionContent = document.getElementById('system-accordion-content');
+            const systemAccordionIcon = document.getElementById('system-accordion-icon');
+            const listIntervalType = document.getElementById('list-interval-type');
+            const listIntervalStaticContainer = document.getElementById('list-interval-static-container');
+            const listIntervalRandomContainer = document.getElementById('list-interval-random-container');
+            const listIntervalMin = document.getElementById('list-interval-min');
+            const listIntervalMax = document.getElementById('list-interval-max');
+            const listRepeat = document.getElementById('list-repeat');
+            // (BARU) DOM untuk Timer
+            const listTotalTime = document.getElementById('list-total-time');
+            const listCountdownTime = document.getElementById('list-countdown-time');
+
 
             // (BARU) DOM Referensi untuk Pengaturan yang akan disembunyikan
             const optimizerContainer = document.getElementById('optimizer-container');
-            const styleReferenceContainer = document.getElementById('style-reference-container');
             const subjectReferenceContainer = document.getElementById('subject-reference-container'); // (BARU)
-            const imageCountContainer = document.getElementById('image-count-container'); // (BARU)
-            const aspectRatioContainer = document.getElementById('aspect-ratio-container'); // (BARU)
+            // (DIKEMBALIKAN) Referensi ke elemen global
+            const styleReferenceContainer = document.getElementById('style-reference-container');
+            const imageCountContainer = document.getElementById('image-count-container');
+            const aspectRatioContainer = document.getElementById('aspect-ratio-container');
+
 
             // DOM Referensi untuk Referensi Subjek (Multi)
             const uploadSubject = document.getElementById('upload-subject');
@@ -351,10 +426,14 @@
             let fetchedTemplates = []; 
             let fetchedListPrompts = []; // (BARU) State terpisah untuk Mode List
 
-            // (BARU) State untuk Mode List
+            // (DIMODIFIKASI) State untuk Mode List
             let isBatchRunning = false;
             let currentBatchIndex = 0;
             let batchTimeoutId = null;
+            let batchStartTime = 0; // (BARU)
+            let batchTotalTimerId = null; // (BARU)
+            let batchNextRunTime = 0; // (BARU)
+            let batchCountdownTimerId = null; // (BARU)
 
             // === LOGIKA INDEXEDDB UNTUK HISTORY ===
             
@@ -459,6 +538,14 @@
             }
 
             const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            
+            // (BARU) Helper untuk format waktu JJ:MM:DD
+            function formatTime(seconds) {
+                const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+                const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+                const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+                return `${h}:${m}:${s}`;
+            }
 
             async function fetchWithRetry(url, options, maxRetries = 4) {
                 let attempt = 0;
@@ -611,8 +698,10 @@
                     canvasViewTitle.classList.remove('text-slate-400', 'hover:text-slate-600', 'font-medium');
                     historyViewTitle.classList.remove('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
                     historyViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-medium');
-                    if (generatedImages.some(img => img.base64)) downloadBtn.classList.remove('hidden'); else downloadBtn.classList.add('hidden');
-                } else {
+                    if (generatedImages.some(img => img && img.base64)) downloadBtn.classList.remove('hidden'); else downloadBtn.classList.add('hidden');
+                
+                } else { 
+                    await renderHistory(); 
                     outputGrid.classList.add('hidden');
                     historyContainer.classList.remove('hidden');
                     historyViewTitle.classList.add('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
@@ -620,7 +709,6 @@
                     canvasViewTitle.classList.remove('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
                     canvasViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-medium');
                     downloadBtn.classList.add('hidden');
-                    await renderHistory();
                 }
             }
 
@@ -638,14 +726,54 @@
                 previewModal.dataset.currentImageUrl = '';
             }
 
+            async function handleDownloadZip() {
+                if (generatedImages.length === 0) {
+                    showMessage("Tidak ada gambar untuk diunduh.", 'info');
+                    return;
+                }
+                showMessage("Membuat file ZIP...", 'info');
+                try {
+                    const zip = new JSZip();
+                    generatedImages.forEach((img, index) => {
+                        if (img && img.base64) { 
+                            const base64Data = img.base64.split(',')[1];
+                            zip.file(`image_${index + 1}.png`, base64Data, { base64: true });
+                        }
+                    });
+                    const content = await zip.generateAsync({ type: "blob" });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = `gemini_canvas_export_${new Date().getTime()}.zip`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                    const validImagesCount = generatedImages.filter(img => img && img.base64).length;
+                    showMessage(`Berhasil mengunduh ${validImagesCount} gambar!`, 'success');
+                } catch (error) {
+                    console.error("Gagal membuat ZIP:", error);
+                    showMessage("Gagal membuat file ZIP.", 'error');
+                }
+            }
+
+            function getIntervalTime() {
+                const type = listIntervalType.value;
+                if (type === 'random') {
+                    const min = parseInt(listIntervalMin.value, 10) || 1;
+                    const max = parseInt(listIntervalMax.value, 10) || 5;
+                    const finalMin = Math.min(min, max);
+                    const finalMax = Math.max(min, max);
+                    return Math.floor(Math.random() * (finalMax - finalMin + 1)) + finalMin;
+                } else {
+                    return parseInt(listIntervalTime.value, 10) || 5;
+                }
+            }
+
             // === FUNGSI INTI ===
             
-            /**
-             * (DIMODIFIKASI) Hanya mengambil dan me-render template untuk Mode Template
-             */
             async function fetchAndRenderTemplates() {
                 showMessage("Memuat template dari Google Sheet...", 'info');
-                const csvUrl = DEFAULT_TEMPLATE_URL; // Gunakan URL template default
+                const csvUrl = DEFAULT_TEMPLATE_URL; 
                 try {
                     const response = await fetch(csvUrl);
                     if (!response.ok) throw new Error(`Gagal mengambil CSV: ${response.statusText}`);
@@ -675,9 +803,9 @@
                         return null;
                     }).filter(t => t && t.name && t.prompt);
 
-                    fetchedTemplates = templates; // Simpan di state template
+                    fetchedTemplates = templates; 
                     showMessage(`Berhasil memuat ${templates.length} template.`, 'success');
-                    renderTemplateButtons(templates); // Render tombol template
+                    renderTemplateButtons(templates); 
                 } catch (error) {
                     console.error("Gagal memuat template:", error);
                     showMessage("Gagal memuat template. Menggunakan daftar kosong.", 'error');
@@ -686,9 +814,6 @@
                 }
             }
 
-            /**
-             * (BARU) Mengambil dan mem-parsing prompt untuk Mode List
-             */
             async function fetchListPrompts() {
                 showMessage("Memuat daftar prompt dari Google Sheet...", 'info');
                 const csvUrl = listSheetUrlInput.value || DEFAULT_LIST_EXAMPLE_URL;
@@ -718,23 +843,21 @@
                         }
                         values.push(field.trim().replace(/^"|"$/g, ''));
                         
-                        // (PERBAIKAN) Ubah logika untuk menerima 1 kolom
                         if (values.length >= 1 && values[0]) {
                             const promptText = values[0];
                             return { 
-                                category: "Daftar", // Kategori default
-                                // Gunakan prompt sebagai nama, potong agar tidak terlalu panjang
+                                category: "Daftar", 
                                 name: promptText.substring(0, 50) + (promptText.length > 50 ? "..." : ""), 
-                                description: "Prompt dari Google Sheet 1-kolom.", // Deskripsi default
+                                description: "Prompt dari Google Sheet 1-kolom.", 
                                 prompt: promptText 
                             };
                         }
                         return null;
-                    }).filter(t => t && t.name && t.prompt); // Filter ini akan tetap berfungsi
+                    }).filter(t => t && t.name && t.prompt); 
 
-                    fetchedListPrompts = prompts; // Simpan di state list
+                    fetchedListPrompts = prompts; 
                     showMessage(`Berhasil memuat ${prompts.length} prompt untuk batch.`, 'success');
-                    listTotalCount.textContent = prompts.length; // Update total list
+                    listTotalCount.textContent = prompts.length; 
                 } catch (error) {
                     console.error("Gagal memuat daftar prompt:", error);
                     showMessage("Gagal memuat daftar prompt. Periksa URL.", 'error');
@@ -788,21 +911,17 @@
                     };
                 }
                 const result = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                
                 if (useMultimodal) {
                     const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-                    if (!base64Data) { // (PERBAIKAN) Tambahkan logging jika gambar tidak ditemukan
-                        console.error("Respon multimodal tidak mengandung gambar:", JSON.stringify(result, null, 2));
-                    }
+                    if (!base64Data) console.error("API Multimodal Error:", result); 
                     return base64Data ? `data:image/png;base64,${base64Data}` : null;
                 } else {
                     const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
-                    if (!base64Data) { // (PERBAIKAN) Tambahkan logging jika gambar tidak ditemukan
-                        console.error("Respon text-to-image tidak mengandung gambar:", JSON.stringify(result, null, 2));
-                    }
+                    if (!base64Data) console.error("API Imagen Error:", result); 
                     return base64Data ? `data:image/png;base64,${base64Data}` : null;
                 }
             }
+
 
             function renderTemplateButtons(templates) {
                 templateButtonsContainer.innerHTML = '';
@@ -832,6 +951,268 @@
                 }
             }
 
+            async function updateCard(card, finalPrompt, base64) {
+                const spinner = card.querySelector('.spinner');
+                const img = card.querySelector('img');
+                const downloadBtnEl = card.querySelector('.download-single-btn'); 
+                const regenerateBtn = card.querySelector('.regenerate-btn');
+                const copyBtn = card.querySelector('.copy-prompt-btn');
+                const promptEl = card.querySelector('.card-prompt');
+
+                if (base64) {
+                    img.src = base64;
+                    img.classList.remove('hidden');
+                    spinner.classList.add('hidden');
+                    downloadBtnEl.disabled = false;
+                    
+                    const index = parseInt(card.dataset.index, 10);
+                    generatedImages[index] = { base64: base64, prompt: finalPrompt };
+                    card.dataset.base64 = base64; 
+                    
+                    if (currentView === 'canvas' && generatedImages.some(img => img && img.base64)) {
+                        downloadBtn.classList.remove('hidden'); 
+                    }
+
+                    try {
+                        const historyItem = {
+                            id: `img_${new Date().getTime()}_${index}`,
+                            prompt: finalPrompt,
+                            base64: base64,
+                            timestamp: new Date().getTime()
+                        };
+                        await saveImageToHistory(historyItem);
+                    } catch (err) {
+                        console.error("Gagal menyimpan ke riwayat:", err);
+                        showMessage("Gagal menyimpan ke riwayat.", "error");
+                    }
+                    
+                    if (currentMode === 'list' && listAutoDownload.checked) {
+                        downloadBase64File(base64, `list_image_${currentBatchIndex + 1}_${index + 1}.png`);
+                    }
+
+                } else {
+                    img.src = 'https://placehold.co/512x512/f87171/ffffff?text=Gagal';
+                    img.classList.remove('hidden');
+                    spinner.classList.add('hidden');
+                    showMessage("Gagal menghasilkan gambar.", 'error');
+                }
+
+                promptEl.textContent = finalPrompt;
+                promptEl.title = finalPrompt;
+                card.dataset.prompt = finalPrompt; 
+                regenerateBtn.disabled = false;
+                copyBtn.disabled = false;
+            }
+
+            async function processSinglePrompt(originalPrompt, imageCount, aspectRatio, subjectRefs, styleRefs) {
+                const optimizerSelect = document.getElementById('select-optimizer');
+                const useOptimizer = optimizerSelect.value === 'image';
+                
+                if (currentView !== 'canvas') {
+                    await switchView('canvas');
+                }
+                outputGrid.innerHTML = ''; 
+                generatedImages = new Array(imageCount).fill(null);
+                downloadBtn.classList.add('hidden');
+
+                let prompts = new Array(imageCount).fill(originalPrompt);
+
+                if (useOptimizer) {
+                    showMessage("Mengoptimasi prompt...", 'info');
+                    const optimizedPrompts = await Promise.allSettled(
+                        prompts.map(p => optimizePrompt(p))
+                    );
+                    prompts = optimizedPrompts.map((result, i) => 
+                        result.status === 'fulfilled' ? result.value : prompts[i]
+                    );
+                }
+                
+                showMessage(`Menghasilkan ${imageCount} gambar...`, 'info');
+
+                const placeholderCards = prompts.map((prompt, i) => {
+                    const card = createPlaceholderCard(useOptimizer ? 'Mengoptimasi...' : originalPrompt, i);
+                    outputGrid.appendChild(card);
+                    return { card, prompt };
+                });
+
+                await Promise.allSettled(placeholderCards.map(async ({ card, prompt }) => {
+                    try {
+                        const base64 = await generateImage(prompt, aspectRatio, subjectRefs, styleRefs);
+                        if (!base64) throw new Error("API tidak mengembalikan gambar.");
+                        await updateCard(card, prompt, base64);
+                    } catch (error) {
+                        console.error("Gagal memproses prompt:", error);
+                        await updateCard(card, prompt, null);
+                    }
+                }));
+            }
+
+            async function handleRegenerate(card) {
+                const originalPrompt = card.dataset.prompt;
+                if (!originalPrompt) return;
+
+                const spinner = card.querySelector('.spinner');
+                const img = card.querySelector('img');
+                const downloadBtn = card.querySelector('.download-single-btn');
+                const regenerateBtn = card.querySelector('.regenerate-btn');
+                const copyBtn = card.querySelector('.copy-prompt-btn');
+
+                img.classList.add('hidden');
+                spinner.classList.remove('hidden');
+                downloadBtn.disabled = true;
+                regenerateBtn.disabled = true;
+                copyBtn.disabled = true;
+
+                const aspectRatio = document.getElementById('select-aspect-ratio').value;
+                const optimizerSelect = document.getElementById('select-optimizer');
+                const useOptimizer = optimizerSelect.value === 'image';
+
+                let finalPrompt = originalPrompt;
+                if (useOptimizer) {
+                    finalPrompt = await optimizePrompt(originalPrompt);
+                }
+
+                try {
+                    const base64 = await generateImage(finalPrompt, aspectRatio, subjectReferenceBase64s, styleReferenceBase64s);
+                    if (!base64) throw new Error("API tidak mengembalikan gambar.");
+                    await updateCard(card, finalPrompt, base64);
+                } catch (error) {
+                    console.error("Gagal regenerate:", error);
+                    await updateCard(card, finalPrompt, null);
+                }
+            }
+            
+            // (DIMODIFIKASI) Fungsi-fungsi untuk Mode List
+            async function startBatchGeneration() {
+                if (fetchedListPrompts.length === 0) {
+                    showMessage("Tidak ada prompt dalam daftar. Sinkronkan terlebih dahulu.", 'error');
+                    return;
+                }
+                isBatchRunning = true;
+                currentBatchIndex = 0;
+                generateBtnText.textContent = 'Hentikan Batch';
+                generateBtn.classList.remove('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
+                generateBtn.classList.add('from-red-500', 'to-red-600', 'hover:from-red-600', 'hover:to-red-700');
+                modeRadios.forEach(radio => radio.disabled = true);
+                if (currentView !== 'canvas') {
+                    await switchView('canvas');
+                }
+                outputGrid.innerHTML = ''; 
+                generatedImages = []; 
+                downloadBtn.classList.add('hidden');
+                
+                // (BARU) Mulai Timer Total
+                batchStartTime = Date.now();
+                listTotalTime.textContent = '00:00:00';
+                listCountdownTime.textContent = 'Memulai...';
+                if (batchTotalTimerId) clearInterval(batchTotalTimerId);
+                batchTotalTimerId = setInterval(() => {
+                    const elapsedSeconds = Math.floor((Date.now() - batchStartTime) / 1000);
+                    listTotalTime.textContent = formatTime(elapsedSeconds);
+                }, 1000);
+
+                showMessage(`Batch dimulai...`, 'info');
+                runBatchTask();
+            }
+
+            function stopBatchGeneration() {
+                isBatchRunning = false;
+                if (batchTimeoutId) {
+                    clearTimeout(batchTimeoutId);
+                    batchTimeoutId = null;
+                }
+                // (BARU) Hentikan semua timer
+                if (batchTotalTimerId) {
+                    clearInterval(batchTotalTimerId);
+                    batchTotalTimerId = null;
+                }
+                if (batchCountdownTimerId) {
+                    clearInterval(batchCountdownTimerId);
+                    batchCountdownTimerId = null;
+                }
+
+                generateBtnText.textContent = 'Mulai Batch';
+                generateBtn.classList.add('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
+                generateBtn.classList.remove('from-red-500', 'to-red-600', 'hover:from-red-600', 'hover:to-red-700');
+                modeRadios.forEach(radio => radio.disabled = false);
+                listCurrentPrompt.textContent = 'Dihentikan';
+                listCountdownTime.textContent = '--'; // (BARU) Reset countdown
+                showMessage("Batch dihentikan.", 'info');
+            }
+
+            // (DIMODIFIKASI) Logika inti batch dengan timer
+            async function runBatchTask() {
+                if (!isBatchRunning) return; // Keluar jika dihentikan
+
+                // Ambil tugas
+                const task = fetchedListPrompts[currentBatchIndex];
+                const originalPrompt = task.prompt;
+                listCurrentPrompt.textContent = `${currentBatchIndex + 1}/${fetchedListPrompts.length}: ${task.name}`;
+                showMessage(`Batch berjalan: ${currentBatchIndex + 1}/${fetchedListPrompts.length}`, 'info');
+
+                const imageCount = parseInt(document.getElementById('image-count').value, 10) || 1;
+                const aspectRatio = document.getElementById('select-aspect-ratio').value;
+                
+                const batchPlaceholders = [];
+                for (let i = 0; i < imageCount; i++) {
+                    const card = createPlaceholderCard(originalPrompt, generatedImages.length);
+                    outputGrid.prepend(card); 
+                    generatedImages.push(null); 
+                    batchPlaceholders.push(card);
+                }
+
+                // Proses semua gambar untuk prompt ini
+                await Promise.allSettled(batchPlaceholders.map(async (card) => {
+                    try {
+                        const base64 = await generateImage(originalPrompt, aspectRatio, [], styleReferenceBase64s); 
+                        if (!base64) throw new Error("API tidak mengembalikan gambar.");
+                        await updateCard(card, originalPrompt, base64);
+                    } catch (error) {
+                        console.error("Gagal memproses prompt list:", error);
+                        await updateCard(card, originalPrompt, null);
+                    }
+                }));
+
+                // Pindah ke prompt berikutnya
+                currentBatchIndex++;
+                
+                // Cek apakah batch selesai atau perlu diulang
+                if (currentBatchIndex >= fetchedListPrompts.length) {
+                    if (listRepeat.checked) {
+                        currentBatchIndex = 0;
+                        showMessage("Batch Selesai. Mengulang dari awal...", 'info');
+                    } else {
+                        showMessage("Batch selesai!", 'success');
+                        stopBatchGeneration();
+                        listCurrentPrompt.textContent = 'Selesai';
+                        listCountdownTime.textContent = 'Selesai';
+                        return;
+                    }
+                }
+
+                // (BARU) Jadwalkan tugas berikutnya dengan countdown
+                const intervalSeconds = getIntervalTime();
+                const intervalMs = intervalSeconds * 1000;
+                
+                batchNextRunTime = Date.now() + intervalMs;
+                if (batchCountdownTimerId) clearInterval(batchCountdownTimerId);
+
+                // Mulai countdown timer UI
+                batchCountdownTimerId = setInterval(() => {
+                    const remainingMs = batchNextRunTime - Date.now();
+                    if (remainingMs <= 0) {
+                        clearInterval(batchCountdownTimerId);
+                        listCountdownTime.textContent = 'Memulai...';
+                    } else {
+                        listCountdownTime.textContent = `${Math.ceil(remainingMs / 1000)} detik`;
+                    }
+                }, 1000);
+                
+                // Set timeout untuk lari `runBatchTask` berikutnya
+                batchTimeoutId = setTimeout(runBatchTask, intervalMs);
+            }
+
+
             function handleTemplateClick(e) {
                 e.preventDefault(); 
                 const templatePrompt = e.currentTarget.dataset.prompt;
@@ -850,13 +1231,9 @@
                 inputs.single.focus();
             }
 
-            /**
-             * (DIMODIFIKASI) Menangani perubahan mode input (Single, Template, List).
-             */
             function handleModeChange(e) {
                 currentMode = e.target.value;
                 
-                // Sembunyikan semua panel dan pengaturan khusus mode
                 Object.values(panels).forEach(p => p.classList.add('hidden'));
                 optimizerContainer.classList.add('hidden');
                 styleReferenceContainer.classList.add('hidden');
@@ -864,7 +1241,6 @@
                 imageCountContainer.classList.add('hidden');
                 aspectRatioContainer.classList.add('hidden');
 
-                // Hapus highlight template
                 selectedTemplatePrompt = null;
                 document.querySelectorAll('.template-btn').forEach(btn => {
                     btn.classList.remove('bg-blue-500', 'text-white', 'border-blue-500');
@@ -872,7 +1248,7 @@
                 });
 
                 if (isBatchRunning) {
-                    stopBatchGeneration(); // (BARU) Hentikan batch jika beralih mode
+                    stopBatchGeneration(); 
                 }
 
                 switch (currentMode) {
@@ -890,32 +1266,31 @@
                         break;
                     case 'template':
                         panels.template.classList.remove('hidden');
-                        panels.single.classList.remove('hidden'); // Input subjek
-                        subjectReferenceContainer.classList.remove('hidden'); // Referensi subjek
+                        panels.single.classList.remove('hidden'); 
+                        subjectReferenceContainer.classList.remove('hidden'); 
                         imageCountContainer.classList.remove('hidden');
                         aspectRatioContainer.classList.remove('hidden');
-                        // (optimizer dan style ref tetap tersembunyi)
+                        styleReferenceContainer.classList.add('hidden'); 
 
                         panels.single.querySelector('label').textContent = 'Subjek (untuk Template)';
                         inputs.single.placeholder = 'Masukkan subjek untuk template yang dipilih, mis: "Anjing golden retriever"';
                         generateBtnText.textContent = 'Hasilkan Gambar';
                         break;
-                    case 'list': // (BARU) Mode List
+                    case 'list': 
                         panels.list.classList.remove('hidden');
-                        // (Sesuai permintaan: sembunyikan input text)
-                        // panels.single.classList.add('hidden'); 
                         
-                        // (Sesuai permintaan: tampilkan pengaturan ini)
-                        styleReferenceContainer.classList.remove('hidden');
                         imageCountContainer.classList.remove('hidden');
                         aspectRatioContainer.classList.remove('hidden');
-                        // (Sesuai permintaan: sembunyikan input text & optimasi)
+                        styleReferenceContainer.classList.remove('hidden');
+
                         panels.single.classList.add('hidden');
                         optimizerContainer.classList.add('hidden');
-                        subjectReferenceContainer.classList.add('hidden'); // Sembunyikan ref subjek di mode batch
+                        subjectReferenceContainer.classList.add('hidden'); 
 
-                        listTotalCount.textContent = fetchedListPrompts.length; // (DIMODIFIKASI)
+                        listTotalCount.textContent = fetchedListPrompts.length; 
                         listCurrentPrompt.textContent = 'N/A';
+                        listCountdownTime.textContent = '--'; // (BARU) Reset timer
+                        listTotalTime.textContent = '00:00:00'; // (BARU) Reset timer
                         generateBtnText.textContent = 'Mulai Batch';
                         break;
                 }
@@ -972,305 +1347,72 @@
                 return card;
             }
 
-            /**
-             * (DIMODIFIKASI) Menangani klik tombol "Generate" utama.
-             */
             async function handleGenerateClick() {
                 if (isGenerating && currentMode !== 'list') return;
 
-                // (DIMODIFIKASI) Logika Mode List
                 if (currentMode === 'list') {
                     if (isBatchRunning) {
                         stopBatchGeneration();
                     } else {
-                        await startBatchGeneration(); // Menggunakan fetchedListPrompts
+                        await startBatchGeneration(); 
                     }
                     return;
                 }
 
-                // Logika Mode Single & Template
+                isGenerating = true;
+                generateBtn.disabled = true;
+                generateIcon.classList.add('animate-spin');
+                generateBtnText.textContent = 'Sedang Memproses...';
+                
                 let originalPrompt = "";
                 const subject = inputs.single.value.trim(); 
 
                 if (currentMode === 'single') {
                     if (!subject) {
                         showMessage("Silakan masukkan deskripsi gambar.", 'error');
+                        isGenerating = false;
+                        generateBtn.disabled = false;
+                        generateIcon.classList.remove('animate-spin');
+                        generateBtnText.textContent = 'Hasilkan Gambar';
                         return;
                     }
                     originalPrompt = subject;
                 } else { // mode 'template'
                     if (!selectedTemplatePrompt) {
                         showMessage("Silakan pilih template dari daftar.", 'error');
+                        isGenerating = false;
+                        generateBtn.disabled = false;
+                        generateIcon.classList.remove('animate-spin');
+                        generateBtnText.textContent = 'Hasilkan Gambar';
                         return;
                     }
                     if (!subject && subjectReferenceBase64s.length === 0) { 
                         showMessage("Silakan masukkan subjek (teks) ATAU unggah referensi subjek (gambar) untuk template.", 'error');
+                        isGenerating = false;
+                        generateBtn.disabled = false;
+                        generateIcon.classList.remove('animate-spin');
+                        generateBtnText.textContent = 'Hasilkan Gambar';
                         return;
                     }
                     originalPrompt = selectedTemplatePrompt.replace(/\[SUBJECT\]/gi, subject);
                 }
                 
-                if (currentView !== 'canvas') await switchView('canvas');
-
-                setLoadingState(true);
-                outputGrid.innerHTML = '';
-                generatedImages = [];
-                downloadBtn.classList.add('hidden');
-                
-                const optimizationMode = document.getElementById('select-optimizer').value;
                 const imageCount = parseInt(document.getElementById('image-count').value, 10) || 1;
-                const tasks = [];
-                let cardIndex = 0;
-
-                for (let i = 0; i < imageCount; i++) {
-                    const card = createPlaceholderCard(originalPrompt, cardIndex);
-                    outputGrid.appendChild(card);
-                    const effectiveOptMode = optimizationMode === 'off' ? 'off' : 'image';
-                    tasks.push(processSinglePrompt(originalPrompt, effectiveOptMode, card));
-                    cardIndex++;
-                }
-                await Promise.allSettled(tasks);
-                setLoadingState(false);
-                showMessage(`Selesai menghasilkan ${cardIndex} gambar.`, 'success');
-            }
-
-            async function processSinglePrompt(originalPrompt, optimizationMode, card) {
-                let finalPrompt = originalPrompt;
-                try {
-                    if (optimizationMode === 'image') {
-                        card.querySelector('.card-prompt').textContent = 'Mengoptimalkan prompt...';
-                        finalPrompt = await optimizePrompt(originalPrompt);
-                    }
-                    card.querySelector('.card-prompt').textContent = finalPrompt;
-                    card.dataset.prompt = finalPrompt; 
-                    const aspectRatio = document.getElementById('select-aspect-ratio').value;
-                    
-                    // (MODIFIKASI) Gunakan style refs dari state global, bukan dari mode
-                    // (MODIFIKASI) Gunakan subject refs dari state global di mode 'single'/'template'
-                    let activeSubjectRefs = (currentMode === 'single' || currentMode === 'template') ? subjectReferenceBase64s : [];
-                    
-                    const base64Image = await generateImage(
-                        finalPrompt, 
-                        aspectRatio,
-                        activeSubjectRefs,
-                        styleReferenceBase64s // Selalu gunakan ref gaya jika ada
-                    );
-
-                    if (base64Image) {
-                        await updateCard(card, base64Image, finalPrompt);
-                    } else {
-                        throw new Error("API tidak mengembalikan gambar.");
-                    }
-                } catch (error) {
-                    console.error("Gagal memproses prompt:", error);
-                    updateCard(card, null, finalPrompt, `Error: ${error.message || 'Generasi gagal'}`);
-                }
-            }
-
-            /**
-             * (DIMODIFIKASI) Memperbarui kartu UI, sekarang dengan auto-download.
-             */
-            async function updateCard(card, base64, finalPrompt, errorMsg = null) {
-                const spinner = card.querySelector('.spinner');
-                const img = card.querySelector('img');
-                const promptEl = card.querySelector('.card-prompt');
-                const downloadBtnCard = card.querySelector('.download-single-btn');
-                const regenerateBtnCard = card.querySelector('.regenerate-btn');
-                const copyBtnCard = card.querySelector('.copy-prompt-btn');
+                const aspectRatio = document.getElementById('select-aspect-ratio').value;
                 
-                spinner.classList.add('hidden');
-                
-                if (errorMsg) {
-                    promptEl.innerHTML = `<span class="text-red-500 font-medium">${errorMsg}</span><br>${finalPrompt}`;
-                    img.src = "https://placehold.co/512x512/f87171/ffffff?text=Error";
-                    img.classList.remove('hidden');
-                } else {
-                    img.src = base64;
-                    img.classList.remove('hidden');
-                    promptEl.textContent = finalPrompt;
-                    
-                    const index = parseInt(card.dataset.index, 10);
-                    const imageData = {
-                        id: `img_${new Date().getTime()}_${index}`,
-                        index: index,
-                        base64: base64,
-                        prompt: finalPrompt,
-                        timestamp: new Date().getTime()
-                    };
-                    
-                    generatedImages.push(imageData);
-                    card.dataset.base64 = base64;
-                    
-                    await saveImageToHistory(imageData);
-                    downloadBtnCard.disabled = false;
-
-                    // (BARU) Logika Unduh Otomatis untuk Mode List
-                    if (currentMode === 'list' && listAutoDownload.checked) {
-                        downloadBase64File(base64, `batch_image_${imageData.id}.png`);
-                    }
-                }
-                regenerateBtnCard.disabled = false;
-                copyBtnCard.disabled = false;
-                if (generatedImages.some(img => img.base64)) downloadBtn.classList.remove('hidden');
-            }
-
-            async function handleRegenerate(card) {
-                if (isGenerating) return;
-                const originalPrompt = card.dataset.prompt;
-                const index = parseInt(card.dataset.index, 10);
-                const optimizationMode = document.getElementById('select-optimizer').value;
-                card.querySelector('.spinner').classList.remove('hidden');
-                card.querySelector('img').classList.add('hidden');
-                card.querySelector('img').src = '';
-                card.querySelector('.regenerate-btn').disabled = true;
-                card.querySelector('.copy-prompt-btn').disabled = true;
-                card.querySelector('.download-single-btn').disabled = true;
-                generatedImages = generatedImages.filter(img => img.index !== index);
-                const effectiveOptMode = optimizationMode === 'off' ? 'off' : 'image';
-                await processSinglePrompt(originalPrompt, effectiveOptMode, card);
-            }
-
-            async function handleDownloadZip() {
-                const validImages = generatedImages.filter(img => img.base64);
-                if (validImages.length === 0) {
-                    showMessage("Tidak ada gambar untuk diunduh.", 'error');
-                    return;
-                }
-                showMessage(`Mempersiapkan ${validImages.length} gambar...`, 'info');
-                downloadBtn.disabled = true;
-                downloadBtn.textContent = 'Menyiapkan ZIP...';
                 try {
-                    const zip = new JSZip();
-                    for (const image of validImages) {
-                        const base64Data = image.base64.split(',')[1];
-                        zip.file(`image_${image.index + 1}.png`, base64Data, { base64: true });
-                        zip.file(`image_${image.index + 1}_prompt.txt`, image.prompt);
-                    }
-                    const blob = await zip.generateAsync({ type: "blob" });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = 'gemini_canvas_export.zip';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(link.href);
-                    showMessage('Unduhan ZIP berhasil!', 'success');
-                } catch (error) {
-                    console.error("Gagal membuat ZIP:", error);
-                    showMessage('Gagal membuat file ZIP.', 'error');
+                    await processSinglePrompt(originalPrompt, imageCount, aspectRatio, subjectReferenceBase64s, styleReferenceBase64s);
+                } catch (err) {
+                    console.error("Error selama 'processSinglePrompt':", err);
+                    showMessage("Terjadi galat saat memproses.", "error");
                 } finally {
-                    downloadBtn.disabled = false;
-                    downloadBtn.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
-                        Download All (ZIP)
-                    `;
-                }
-            }
-
-            function setLoadingState(loading) {
-                isGenerating = loading;
-                generateBtn.disabled = loading;
-                if (loading) {
-                    generateBtnText.textContent = 'Generating...';
-                    generateIcon.classList.add('animate-spin');
-                } else {
-                    generateBtnText.textContent = 'Hasilkan Gambar'; // Default
-                    // Sesuaikan teks tombol berdasarkan mode saat ini
-                    if (currentMode === 'list') {
-                        generateBtnText.textContent = 'Mulai Batch';
-                    } else {
-                        generateBtnText.textContent = 'Hasilkan Gambar';
-                    }
+                    isGenerating = false;
+                    generateBtn.disabled = false;
                     generateIcon.classList.remove('animate-spin');
+                    generateBtnText.textContent = 'Hasilkan Gambar';
                 }
             }
-            
-            // === (DIMODIFIKASI) FUNGSI MODE LIST ===
-            
-            async function startBatchGeneration() {
-                // (DIMODIFIKASI) Gunakan state list
-                if (fetchedListPrompts.length === 0) {
-                    showMessage("Daftar prompt kosong. Sinkronkan terlebih dahulu.", 'error');
-                    return;
-                }
 
-                if (currentView !== 'canvas') {
-                    await switchView('canvas');
-                }
-
-                isBatchRunning = true;
-                currentBatchIndex = 0;
-                setLoadingState(true); // Ini akan memanggil setLoadingState
-                generateBtnText.textContent = 'Hentikan Batch';
-                generateBtn.classList.remove('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
-                generateBtn.classList.add('from-red-500', 'to-red-600', 'hover:from-red-600', 'hover:to-red-700');
-                generateIcon.classList.remove('animate-spin'); // Hentikan spin di tombol batch
-                
-                outputGrid.innerHTML = ''; // Bersihkan grid untuk batch baru
-                generatedImages = [];
-                
-                await runBatchTask(); // Mulai tugas pertama
-            }
-            
-            function stopBatchGeneration() {
-                isBatchRunning = false;
-                if (batchTimeoutId) {
-                    clearTimeout(batchTimeoutId);
-                    batchTimeoutId = null;
-                }
-                setLoadingState(false); // Ini akan memanggil setLoadingState
-                generateBtnText.textContent = 'Mulai Batch';
-                generateBtn.classList.add('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
-                generateBtn.classList.remove('from-red-500', 'to-red-600', 'hover:from-red-600', 'hover:to-red-700');
-                showMessage("Batch dihentikan oleh pengguna.", 'info');
-                listCurrentPrompt.textContent = 'Dihentikan';
-            }
-            
-            async function runBatchTask() {
-                if (!isBatchRunning) return; // Berhenti jika flag di-set false
-
-                // (DIMODIFIKASI) Gunakan state list
-                if (currentBatchIndex >= fetchedListPrompts.length) {
-                    showMessage("Batch selesai!", 'success');
-                    stopBatchGeneration();
-                    listCurrentPrompt.textContent = 'Selesai';
-                    return;
-                }
-
-                const template = fetchedListPrompts[currentBatchIndex];
-                const originalPrompt = template.prompt.replace(/\[SUBJECT\]/gi, ''); // Hapus [SUBJECT] jika ada
-                
-                listCurrentPrompt.textContent = `${currentBatchIndex + 1}/${fetchedListPrompts.length}: ${template.name}`;
-                showMessage(`Batch berjalan: Memproses "${template.name}"...`, 'info');
-
-                const imageCount = parseInt(document.getElementById('image-count').value, 10) || 1;
-                const tasks = [];
-                let cardIndex = outputGrid.children.length;
-
-                for (let i = 0; i < imageCount; i++) {
-                    const card = createPlaceholderCard(originalPrompt, cardIndex);
-                    // Tambahkan ke bagian atas grid
-                    if (outputGrid.firstChild) {
-                        outputGrid.insertBefore(card, outputGrid.firstChild);
-                    } else {
-                        outputGrid.appendChild(card);
-                    }
-                    // Mode 'list' selalu 'off' untuk optimasi, karena prompt sudah jadi
-                    tasks.push(processSinglePrompt(originalPrompt, 'off', card));
-                    cardIndex++;
-                }
-
-                await Promise.allSettled(tasks);
-
-                // Pindah ke prompt berikutnya
-                currentBatchIndex++;
-                
-                // Jadwalkan tugas berikutnya setelah interval
-                const interval = (parseInt(listIntervalTime.value, 10) || 5) * 1000;
-                batchTimeoutId = setTimeout(runBatchTask, interval);
-            }
-
-            // (BARU) Fungsi untuk memuat dan menyimpan URL List
             function loadListUrl() {
                 const savedUrl = localStorage.getItem(LIST_URL_KEY);
                 listSheetUrlInput.value = savedUrl || DEFAULT_LIST_EXAMPLE_URL;
@@ -1284,7 +1426,7 @@
                 }
                 localStorage.setItem(LIST_URL_KEY, url);
                 showMessage("URL Google Sheet disimpan!", "success");
-                await fetchListPrompts(); // Ambil data setelah menyimpan
+                await fetchListPrompts(); 
             }
 
             // === INISIALISASI EVENT LISTENERS ===
@@ -1312,15 +1454,30 @@
             });
             previewModal.addEventListener('click', (e) => { if (e.target === previewModal) closePreview(); });
 
-            // (DIMODIFIKASI) Event listener dipisahkan
             syncTemplatesBtn.addEventListener('click', fetchAndRenderTemplates);
             syncListBtn.addEventListener('click', fetchListPrompts);
-            saveListUrlBtn.addEventListener('click', saveAndFetchListUrl); // (BARU)
+            saveListUrlBtn.addEventListener('click', saveAndFetchListUrl); 
+
+            systemAccordionBtn.addEventListener('click', () => {
+                systemAccordionContent.classList.toggle('hidden');
+                systemAccordionIcon.classList.toggle('rotate-180');
+            });
+
+            listIntervalType.addEventListener('change', (e) => {
+                if (e.target.value === 'random') {
+                    listIntervalStaticContainer.classList.add('hidden');
+                    listIntervalRandomContainer.classList.remove('hidden');
+                } else {
+                    listIntervalStaticContainer.classList.remove('hidden');
+                    listIntervalRandomContainer.classList.add('hidden');
+                }
+            });
+
 
             (async () => {
-                await fetchAndRenderTemplates(); // Panggil saat memuat
-                loadListUrl(); // (BARU) Muat URL list
-                await fetchListPrompts(); // (BARU) Panggil saat memuat
+                await fetchAndRenderTemplates(); 
+                loadListUrl(); 
+                await fetchListPrompts(); 
             })();
 
             generateBtn.addEventListener('click', handleGenerateClick);
@@ -1328,7 +1485,7 @@
             
             getDB().then(() => {
                 console.log("Database riwayat berhasil diinisialisasi.");
-                handleModeChange({ target: { value: 'single' } }); // Init mode 'single'
+                handleModeChange({ target: { value: 'single' } }); 
                 switchView('canvas');
             }).catch(err => {
                 console.error("Gagal inisialisasi database:", err);
