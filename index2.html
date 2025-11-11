@@ -84,6 +84,9 @@
                     <p class="text-xs text-slate-500">Generasi gambar dengan teknologi Gemini</p>
                 </header>
 
+                <!-- (MOVED) Notification Area -->
+                <div id="message-box" class="hidden p-3 rounded-lg text-sm font-medium text-center animate-pulse"></div>
+
                 <!-- Mode selector with enhanced styling -->
                 <section>
                     <label class="text-sm font-semibold text-slate-700 mb-2 block">Mode Input</label>
@@ -98,12 +101,8 @@
 
                 <!-- Input panels with enhanced styling -->
                 <section class="space-y-4">
-                    <!-- Single Prompt Mode -->
-                    <div id="panel-single">
-                        <label for="prompt-single" class="text-sm font-semibold text-slate-700 mb-2 block">Deskripsi Gambar</label>
-                        <textarea id="prompt-single" rows="5" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white placeholder:text-slate-400 text-sm resize-none" placeholder="Misalnya: Kucing berwarna emas sedang bermain di taman cyberpunk dengan cahaya neon biru dan merah..."></textarea>
-                    </div>
-
+                    <!-- Single Prompt Mode (MOVED TO BOTTOM) -->
+                    
                     <!-- Template Mode -->
                     <div id="panel-template" class="hidden">
                         <label class="text-sm font-semibold text-slate-700 mb-2 block">Pilih Template Gaya</label>
@@ -163,11 +162,18 @@
 
             <!-- Enhanced action buttons section -->
             <section class="p-4 lg:p-6 border-t-2 border-slate-200 space-y-3 bg-gradient-to-t from-slate-50 to-white">
+                
+                <!-- (MOVED) Single Prompt Mode -->
+                <div id="panel-single">
+                    <label for="prompt-single" class="text-sm font-semibold text-slate-700 mb-2 block">Deskripsi Gambar</label>
+                    <textarea id="prompt-single" rows="5" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white placeholder:text-slate-400 text-sm resize-none" placeholder="Misalnya: Kucing berwarna emas sedang bermain di taman cyberpunk dengan cahaya neon biru dan merah..."></textarea>
+                </div>
+
                 <button id="generate-btn" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 active:scale-95">
                     <svg id="generate-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9 1.9 5.8 1.9-5.8 5.8-1.9-5.8-1.9z"/></svg>
                     <span id="generate-btn-text">Hasilkan Gambar</span>
                 </button>
-                <div id="message-box" class="hidden p-3 rounded-lg text-sm font-medium text-center animate-pulse"></div>
+                <!-- (MOVED) Message box was here -->
             </section>
         </aside>
 
@@ -191,18 +197,17 @@
         </main>
     </div>
 
-    <!-- Enhanced preview modal with better styling -->
     <!-- Enhanced preview modal with download and close buttons -->
     <div id="preview-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
         <div class="relative bg-white rounded-xl shadow-2xl max-w-4xl max-h-[90vh] overflow-hidden">
             <!-- Button container with both download and close buttons positioned at top -->
             <div class="absolute top-4 right-4 flex gap-2 z-10">
                 <!-- Download Button (New) -->
-                <button id="download-preview-btn" class="p-2 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg transition-all duration-200 active:scale-95" title="Download Image">
+                <button id="download-preview-btn" class="p-2 rounded-full bg-black/50 hover:bg-green-600 text-white hover:shadow-lg transition-all duration-200 active:scale-95" title="Download Image">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </button>
                 <!-- Close Button (Improved) -->
-                <button id="close-modal-btn" class="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg transition-all duration-200 active:scale-95" title="Close Preview">
+                <button id="close-modal-btn" class="p-2 rounded-full bg-black/50 hover:bg-red-600 text-white hover:shadow-lg transition-all duration-200 active:scale-95" title="Close Preview">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
@@ -268,7 +273,6 @@
             const modalImage = document.getElementById('modal-image');
             const closeModalBtn = document.getElementById('close-modal-btn');
 
-            // const HISTORY_KEY = 'gemini_image_history'; // TIDAK DIGUNAKAN LAGI
             let currentView = 'canvas'; // 'canvas' atau 'history'
 
             // === STATE APLIKASI ===
@@ -291,28 +295,21 @@
              */
             function getDB() {
                 return new Promise((resolve, reject) => {
-                    // Jika koneksi sudah ada, kembalikan
                     if (db) {
                         return resolve(db);
                     }
-
                     const request = indexedDB.open(DB_NAME, DB_VERSION);
-
                     request.onupgradeneeded = (e) => {
                         const dbInstance = e.target.result;
-                        // Buat object store jika belum ada
                         if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
                             const store = dbInstance.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                            // Buat indeks untuk timestamp agar bisa di-query/diurutkan
                             store.createIndex('timestamp', 'timestamp', { unique: false });
                         }
                     };
-
                     request.onsuccess = (e) => {
-                        db = e.target.result; // Simpan koneksi
+                        db = e.target.result;
                         resolve(db);
                     };
-
                     request.onerror = (e) => {
                         console.error("IndexedDB error:", e.target.error);
                         reject(e.target.error);
@@ -326,26 +323,21 @@
              */
             async function loadHistory() {
                 try {
-                    const db = await getDB(); // Pastikan DB siap
-                    
-                    // Menggunakan Promise agar bisa di-await
+                    const db = await getDB();
                     return new Promise((resolve, reject) => {
                         const tx = db.transaction(STORE_NAME, 'readonly');
                         const store = tx.objectStore(STORE_NAME);
-                        const index = store.index('timestamp'); // Gunakan indeks
-                        
+                        const index = store.index('timestamp');
                         const history = [];
-                        // Buka kursor pada indeks, urutkan descending ('prev')
                         const request = index.openCursor(null, 'prev'); 
                         
                         request.onsuccess = (e) => {
                             const cursor = e.target.result;
-                            // Jika ada kursor dan riwayat belum penuh (MAX_HISTORY_ITEMS)
                             if (cursor && history.length < MAX_HISTORY_ITEMS) {
-                                history.push(cursor.value); // Tambahkan item
-                                cursor.continue(); // Lanjutkan ke item berikutnya
+                                history.push(cursor.value);
+                                cursor.continue();
                             } else {
-                                resolve(history); // Selesai, kembalikan array riwayat
+                                resolve(history);
                             }
                         };
                         request.onerror = (e) => {
@@ -353,10 +345,9 @@
                             reject(e.target.error);
                         };
                     });
-
                 } catch (e) {
                     console.error("Gagal memuat riwayat dari IndexedDB", e);
-                    return []; // Return array kosong jika gagal
+                    return [];
                 }
             }
 
@@ -366,37 +357,29 @@
              */
             async function saveImageToHistory(item) {
                 try {
-                    const db = await getDB(); // Pastikan DB siap
-                    
-                    // Mulai transaksi readwrite
+                    const db = await getDB();
                     const tx = db.transaction(STORE_NAME, 'readwrite');
                     const store = tx.objectStore(STORE_NAME);
                     
-                    // 1. Tambahkan item baru (put akan 'add' or 'update')
                     store.put(item);
 
-                    // 2. Pruning (Hapus item lama jika lebih dari MAX_HISTORY_ITEMS)
                     const index = store.index('timestamp');
-                    const cursorRequest = index.openCursor(null, 'prev'); // Newest first
+                    const cursorRequest = index.openCursor(null, 'prev');
                     
                     let count = 0;
-                    // Ini akan berjalan secara paralel dengan 'put' dalam transaksi yang sama
                     cursorRequest.onsuccess = (e) => {
                         const cursor = e.target.result;
                         if (cursor) {
                             count++;
                             if (count > MAX_HISTORY_ITEMS) {
-                                // Ditemukan item ke-51 (atau lebih), hapus
                                 store.delete(cursor.primaryKey);
                             }
                             cursor.continue();
                         }
                     };
 
-                    // Kembalikan promise yang resolve saat transaksi selesai
                     return new Promise((resolve, reject) => {
                         tx.oncomplete = () => {
-                            // console.log("Riwayat berhasil disimpan & dipangkas.");
                             resolve();
                         };
                         tx.onerror = (e) => {
@@ -404,7 +387,6 @@
                             reject(e.target.error);
                         };
                     });
-
                 } catch (e) {
                     console.error("Gagal menyimpan riwayat ke IndexedDB", e);
                 }
@@ -415,7 +397,7 @@
              */
             async function renderHistory() {
                 historyContainer.innerHTML = '';
-                const history = await loadHistory(); // Panggil versi async
+                const history = await loadHistory();
 
                 if (history.length === 0) {
                     historyContainer.innerHTML = `<p class="text-center text-slate-500 py-10">Tidak ada riwayat. Hasilkan gambar untuk memulai!</p>`;
@@ -430,6 +412,8 @@
                     
                     const historyCard = document.createElement('div');
                     historyCard.className = 'flex flex-col sm:flex-row bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow border border-slate-200';
+                    
+                    // (MODIFIKASI) Menambahkan Tombol Copy Prompt ke HTML
                     historyCard.innerHTML = `
                         <img src="${item.base64}" alt="History Image" class="history-preview-img w-full sm:w-24 h-auto sm:h-24 object-cover rounded-md mb-3 sm:mb-0 sm:mr-4 border border-slate-300 cursor-pointer">
                         <div class="flex-1">
@@ -444,13 +428,25 @@
                                 </button>
                                 <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Unduh</span>
                             </div>
+                            <!-- (BARU) Tombol Copy Prompt -->
+                            <div class="relative group">
+                                <button class="history-copy-prompt-btn p-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                </button>
+                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Salin Prompt</span>
+                            </div>
                         </div>
                     `;
                     historyContainer.appendChild(historyCard);
 
-                    // (BARU) Listener untuk Pratinjau Riwayat
+                    // Listener untuk Pratinjau Riwayat
                     historyCard.querySelector('.history-preview-img').addEventListener('click', (e) => {
                         openPreview(e.target.src);
+                    });
+                    
+                    // (BARU) Listener untuk Salin Prompt Riwayat
+                    historyCard.querySelector('.history-copy-prompt-btn').addEventListener('click', () => {
+                        copyToClipboard(item.prompt); // Memanggil helper baru
                     });
                 });
                 
@@ -473,12 +469,11 @@
                 if (view === 'canvas') {
                     outputGrid.classList.remove('hidden');
                     historyContainer.classList.add('hidden');
-                    canvasViewTitle.classList.add('border-b-2', 'border-slate-800', 'font-bold');
-                    canvasViewTitle.classList.remove('text-slate-400', 'hover:text-slate-600', 'font-normal');
-                    historyViewTitle.classList.remove('border-b-2', 'border-slate-800', 'font-bold');
-                    historyViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-normal');
+                    canvasViewTitle.classList.add('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
+                    canvasViewTitle.classList.remove('text-slate-400', 'hover:text-slate-600', 'font-medium');
+                    historyViewTitle.classList.remove('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
+                    historyViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-medium');
                     
-                    // Tampilkan tombol ZIP hanya jika ada gambar di state 'generatedImages'
                     if (generatedImages.some(img => img.base64)) {
                         downloadBtn.classList.remove('hidden');
                     } else {
@@ -488,13 +483,13 @@
                 } else { // history
                     outputGrid.classList.add('hidden');
                     historyContainer.classList.remove('hidden');
-                    historyViewTitle.classList.add('border-b-2', 'border-slate-800', 'font-bold');
-                    historyViewTitle.classList.remove('text-slate-400', 'hover:text-slate-600', 'font-normal');
-                    canvasViewTitle.classList.remove('border-b-2', 'border-slate-800', 'font-bold');
-                    canvasViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-normal');
-                    downloadBtn.classList.add('hidden'); // Sembunyikan tombol ZIP di tampilan History
+                    historyViewTitle.classList.add('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
+                    historyViewTitle.classList.remove('text-slate-400', 'hover:text-slate-600', 'font-medium');
+                    canvasViewTitle.classList.remove('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
+                    canvasViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-medium');
+                    downloadBtn.classList.add('hidden');
                     
-                    await renderHistory(); // Panggil versi async
+                    await renderHistory();
                 }
             }
 
@@ -515,8 +510,8 @@
              */
             function closePreview() {
                 previewModal.classList.add('hidden');
-                modalImage.src = ''; // Kosongkan src
-                previewModal.dataset.currentImageUrl = ''; // Clear stored URL
+                modalImage.src = '';
+                previewModal.dataset.currentImageUrl = '';
             }
 
             // === FUNGSI UTILITAS ===
@@ -531,6 +526,28 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+            }
+
+            /**
+             * (BARU) Helper function to copy text to clipboard.
+             */
+            function copyToClipboard(text) {
+                const tempTextarea = document.createElement('textarea');
+                tempTextarea.value = text;
+                document.body.appendChild(tempTextarea);
+                tempTextarea.select();
+                tempTextarea.setSelectionRange(0, 99999);
+                
+                try {
+                    // Gunakan document.execCommand sebagai fallback yang andal di iFrame
+                    document.execCommand('copy');
+                    showMessage('Prompt berhasil disalin!', 'success');
+                } catch (err) {
+                    console.error('Gagal menyalin prompt: ', err);
+                    showMessage('Gagal menyalin prompt.', 'error');
+                }
+                
+                document.body.removeChild(tempTextarea);
             }
 
             /**
@@ -590,7 +607,7 @@
                     return result.candidates[0].content.parts[0].text.trim();
                 } else {
                     console.warn("Optimasi prompt gagal, menggunakan prompt asli.");
-                    return userPrompt; // Fallback ke prompt asli
+                    return userPrompt;
                 }
             }
 
@@ -601,17 +618,14 @@
                 let apiUrl, payload;
                 const hasImageInput = styleBase64s.length > 0 || subjectBase64s.length > 0;
                 
-                // Ambil rasio aspek dari DOM
                 const aspectRatio = document.getElementById('select-aspect-ratio').value;
 
                 if (hasImageInput) {
-                    // --- Gunakan Nano-Banana (gemini-2.5-flash-image-preview) untuk Multimodal ---
                     apiUrl = API_URL_IMAGE_EDIT;
                     
                     let promptParts = [];
                     let instructionText = "Buat gambar baru berdasarkan instruksi ini. ";
 
-                    // 1. Tambahkan Subjek (Multi)
                     subjectBase64s.forEach((base64String, index) => {
                         const base64Data = base64String.split(',')[1];
                         const mimeType = base64String.match(/data:(image\/.+?);/)[1];
@@ -619,7 +633,6 @@
                         instructionText += `Pertahankan subjek utama dari gambar subjek ${index + 1}. `;
                     });
 
-                    // 2. Tambahkan Gaya (Multi)
                     styleBase64s.forEach((base64String, index) => {
                         const base64Data = base64String.split(',')[1];
                         const mimeType = base64String.match(/data:(image\/.+?);/)[1];
@@ -627,12 +640,9 @@
                         instructionText += `Terapkan gaya visual (tone, tekstur, pencahayaan) dari gambar gaya ${index + 1}. `;
                     });
 
-                    // 3. Tambahkan Prompt Teks
                     instructionText += `Gunakan prompt teks ini untuk detail lebih lanjut: "${prompt}".`;
-                    // Tambahkan hint rasio aspek (MODIFIKASI)
                     instructionText += ` Harap buat gambar ini dengan rasio aspek ${aspectRatio}.`;
                     
-                    // Instruction must be the first part, images follow
                     promptParts.unshift({ text: instructionText }); 
 
                     payload = {
@@ -657,13 +667,12 @@
                     }
 
                 } else {
-                    // --- Gunakan Imagen (imagen-3.0-generate-002) untuk Text-to-Image (Default) ---
                     apiUrl = API_URL_IMAGE_GEN;
                     payload = {
                         instances: [{ prompt: prompt }],
                         parameters: { 
                             sampleCount: 1,
-                            aspectRatio: aspectRatio // Tambahkan rasio aspek di sini (MODIFIKASI)
+                            aspectRatio: aspectRatio
                         }
                     };
 
@@ -690,16 +699,21 @@
              */
             function handleModeChange(e) {
                 currentMode = e.target.value;
+                // Objek panels 'single' sekarang ada di footer, tapi 'template' masih di atas.
+                // Logika ini masih berfungsi untuk menyembunyikan/menampilkan panel yang tepat.
                 Object.values(panels).forEach(panel => panel.classList.add('hidden'));
                 panels[currentMode].classList.remove('hidden');
 
-                // Di mode template, kita hanya perlu tombol Generate untuk mengaktifkan kembali Single
                 if (currentMode === 'template') {
                     generateBtn.disabled = true;
                     generateBtnText.textContent = 'Pilih Template Dulu';
+                    // Sembunyikan panel 'single' secara eksplisit jika ada di footer
+                    panels.single.classList.add('hidden');
                 } else {
                     generateBtn.disabled = false;
                     generateBtnText.textContent = 'Generate';
+                    // Tampilkan panel 'single' secara eksplisit
+                    panels.single.classList.remove('hidden');
                 }
             }
 
@@ -727,8 +741,8 @@
                 if (!files) return;
 
                 let filesLoaded = 0;
-                previewContainer.innerHTML = ''; // Bersihkan pratinjau lama
-                stateArray.length = 0; // Kosongkan array state saat unggah baru
+                previewContainer.innerHTML = '';
+                stateArray.length = 0;
 
                 if (files.length === 0) {
                     previewContainer.classList.add('hidden');
@@ -743,9 +757,8 @@
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         const base64String = event.target.result;
-                        stateArray.push(base64String); // Tambahkan ke array state
+                        stateArray.push(base64String);
 
-                        // Tambahkan pratinjau
                         const img = document.createElement('img');
                         img.src = base64String;
                         img.className = "max-h-20 w-auto inline-block rounded-md border border-slate-300";
@@ -764,10 +777,10 @@
              * Fungsi generik untuk membersihkan referensi gambar.
              */
             function clearImageReferences(stateArray, uploadInput, previewContainer, clearButton) {
-                stateArray.length = 0; // Kosongkan array
-                uploadInput.value = null; // Reset input file
+                stateArray.length = 0;
+                uploadInput.value = null;
                 previewContainer.classList.add('hidden');
-                previewContainer.innerHTML = ''; // Kosongkan pratinjau
+                previewContainer.innerHTML = '';
                 clearButton.classList.add('hidden');
                 showMessage('Referensi gambar dihapus.', 'info');
             }
@@ -794,13 +807,9 @@
                 const index = e.currentTarget.dataset.index;
                 const template = TEMPLATES[index];
 
-                // 1. Isi prompt tunggal
                 inputs.single.value = template.prompt;
-
-                // 2. Switch kembali ke mode 'Single'
                 document.getElementById('mode-single').checked = true;
                 handleModeChange({ target: { value: 'single' } });
-
                 showMessage(`Template '${template.name}' diterapkan. Ganti [SUBJECT] dengan subjek Anda!`, 'info');
             }
 
@@ -851,7 +860,6 @@
                 // --- Event Listener untuk Pratinjau (BARU) ---
                 const imgElement = card.querySelector('img');
                 imgElement.addEventListener('click', () => {
-                    // Hanya buka pratinjau jika gambar sudah dimuat (src ada dan tidak tersembunyi)
                     if (imgElement.src && !imgElement.classList.contains('hidden')) {
                         openPreview(imgElement.src);
                     }
@@ -869,30 +877,13 @@
                 });
                 // ---------------------------------------------------
 
-                // (PERUBAHAN) Menjadikan listener async untuk menangani handleRegenerate
                 card.querySelector('.regenerate-btn').addEventListener('click', async () => await handleRegenerate(card));
                 
+                // (MODIFIKASI) Menggunakan helper copyToClipboard
                 const copyBtn = card.querySelector('.copy-prompt-btn');
                 copyBtn.addEventListener('click', () => {
                     const promptText = card.querySelector('.card-prompt').textContent;
-                    
-                    const tempTextarea = document.createElement('textarea');
-                    tempTextarea.value = promptText;
-                    document.body.appendChild(tempTextarea);
-                    tempTextarea.select();
-                    tempTextarea.setSelectionRange(0, 99999);
-                    
-                    try {
-                        document.execCommand('copy');
-                        
-                        showMessage('Prompt berhasil disalin!', 'success');
-
-                    } catch (err) {
-                        console.error('Gagal menyalin prompt: ', err);
-                        showMessage('Gagal menyalin prompt.', 'error');
-                    }
-                    
-                    document.body.removeChild(tempTextarea);
+                    copyToClipboard(promptText); // Memanggil helper
                 });
 
                 return card;
@@ -907,41 +898,40 @@
                 const promptEl = card.querySelector('.card-prompt');
                 const regenBtn = card.querySelector('.regenerate-btn');
                 const copyBtn = card.querySelector('.copy-prompt-btn');
-                const downloadSingleBtn = card.querySelector('.download-single-btn'); // Ambil tombol unduh
+                const downloadSingleBtn = card.querySelector('.download-single-btn');
 
                 if (imageBase64) {
                     img.src = imageBase64;
                     img.classList.remove('hidden');
-                    img.classList.add('cursor-pointer'); // (BARU) Tambahkan kursor
+                    img.classList.add('cursor-pointer');
                     spinner.classList.add('hidden');
                     regenBtn.disabled = false;
                     copyBtn.disabled = false;
+                    downloadSingleBtn.disabled = false;
                     
-                    downloadSingleBtn.disabled = false; // Aktifkan tombol unduh
-                    // -----------------------------
-                    
-                    // --- Simpan ke Riwayat (Async) ---
                     const historyItem = {
-                        // Use crypto.randomUUID for unique ID, fallback if unavailable
                         id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2, 10),
                         timestamp: Date.now(),
                         prompt: finalPrompt,
                         base64: imageBase64,
                     };
-                    await saveImageToHistory(historyItem); // (PERUBAHAN) await
-                    // ---------------------------------
+                    await saveImageToHistory(historyItem);
 
                 } else {
                     spinner.classList.add('hidden');
                     card.querySelector('.aspect-square').innerHTML += '<span class="text-red-500 text-xs p-2">Gagal memuat</span>';
-                    img.classList.remove('cursor-pointer'); // (BARU) Hapus kursor jika gagal
+                    img.classList.remove('cursor-pointer');
                     regenBtn.disabled = false;
                     copyBtn.disabled = true;
-                    downloadSingleBtn.disabled = true; // Nonaktifkan tombol unduh jika gagal
+                    downloadSingleBtn.disabled = true;
                 }
                 
                 promptEl.textContent = finalPrompt;
                 promptEl.title = finalPrompt;
+                
+                // (MODIFIKASI) Tambahkan base64 ke card dataset untuk tombol unduh
+                card.dataset.base64 = imageBase64; 
+                // -----------------------------------------------------------
 
                 const index = parseInt(card.dataset.index, 10);
                 const existing = generatedImages.find(item => item.index === index);
@@ -975,13 +965,12 @@
                         promptEl.title = finalPrompt;
                     }
 
-                    // Panggil generateImage dengan kedua referensi gambar
                     const imageBase64 = await generateImage(finalPrompt, styleReferenceBase64s, subjectReferenceBase64s);
-                    await updateCard(card, finalPrompt, imageBase64); // (PERUBAHAN) await
+                    await updateCard(card, finalPrompt, imageBase64);
                 
                 } catch (error) {
                     console.error(`Gagal memproses prompt: ${originalPrompt}`, error);
-                    await updateCard(card, finalPrompt, null); // (PERUBAHAN) await
+                    await updateCard(card, finalPrompt, null);
                 }
             }
 
@@ -991,7 +980,6 @@
             async function handleGenerateClick() {
                 if (isGenerating || currentMode === 'template') return;
 
-                // 1. Kumpulkan prompt (hanya dari mode 'single')
                 let prompts = [];
                 const p = inputs.single.value.trim();
                 if (p) prompts.push(p);
@@ -1001,12 +989,10 @@
                     return;
                 }
                 
-                // Pastikan tampilan kembali ke canvas jika beralih dari history
                 if (currentView !== 'canvas') {
-                    await switchView('canvas'); // (PERUBAHAN) await
+                    await switchView('canvas');
                 }
 
-                // 2. Setup UI untuk state loading
                 setLoadingState(true);
                 outputGrid.innerHTML = '';
                 generatedImages = [];
@@ -1017,7 +1003,6 @@
                 const tasks = [];
                 let cardIndex = 0;
 
-                // 3. Buat placeholder dan siapkan tugas
                 const originalPrompt = prompts[0];
 
                 for (let i = 0; i < imageCount; i++) {
@@ -1025,15 +1010,12 @@
                     outputGrid.appendChild(card);
                     const effectiveOptMode = optimizationMode === 'off' ? 'off' : 'image';
                     
-                    // Panggil processSinglePrompt (yang sekarang async)
                     tasks.push(processSinglePrompt(originalPrompt, effectiveOptMode, card));
                     cardIndex++;
                 }
 
-                // 4. Jalankan semua tugas
                 await Promise.allSettled(tasks);
 
-                // 5. Selesai
                 setLoadingState(false);
                 showMessage(`Selesai menghasilkan ${cardIndex} gambar.`, 'success');
             }
@@ -1048,20 +1030,17 @@
                 const index = parseInt(card.dataset.index, 10);
                 const optimizationMode = document.getElementById('select-optimizer').value;
 
-                // Reset card UI ke state loading
                 card.querySelector('.spinner').classList.remove('hidden');
                 card.querySelector('img').classList.add('hidden');
                 card.querySelector('img').src = '';
                 card.querySelector('.regenerate-btn').disabled = true;
                 card.querySelector('.copy-prompt-btn').disabled = true;
-                card.querySelector('.download-single-btn').disabled = true; // Nonaktifkan unduh saat regenerasi
+                card.querySelector('.download-single-btn').disabled = true;
 
-                // Hapus hasil lama dari state
                 generatedImages = generatedImages.filter(img => img.index !== index);
                 
                 const effectiveOptMode = optimizationMode === 'off' ? 'off' : 'image';
 
-                // Panggil processSinglePrompt (yang sekarang async)
                 await processSinglePrompt(originalPrompt, effectiveOptMode, card);
             }
 
@@ -1128,19 +1107,15 @@
             // === INISIALISASI EVENT LISTENERS ===
             modeRadios.forEach(radio => radio.addEventListener('change', handleModeChange));
             
-            // Listeners untuk Referensi Subjek (Multi)
             uploadSubject.addEventListener('change', (e) => handleImageUpload(e, subjectReferenceBase64s, subjectPreviewContainer, clearSubjectBtn));
             clearSubjectBtn.addEventListener('click', () => clearImageReferences(subjectReferenceBase64s, uploadSubject, subjectPreviewContainer, clearSubjectBtn));
             
-            // Listeners untuk Referensi Gaya (Multi)
             uploadStyle.addEventListener('change', (e) => handleImageUpload(e, styleReferenceBase64s, stylePreviewContainer, clearStyleBtn));
             clearStyleBtn.addEventListener('click', () => clearImageReferences(styleReferenceBase64s, uploadStyle, stylePreviewContainer, clearStyleBtn));
             
-            // --- Listeners BARU untuk History (dibuat async) ---
             canvasViewTitle.addEventListener('click', async () => await switchView('canvas'));
             historyViewTitle.addEventListener('click', async () => await switchView('history'));
             
-            // --- Listeners BARU untuk Modal ---
             closeModalBtn.addEventListener('click', closePreview);
             const downloadPreviewBtn = document.getElementById('download-preview-btn');
             downloadPreviewBtn.addEventListener('click', () => {
@@ -1155,30 +1130,27 @@
             });
 
             previewModal.addEventListener('click', (e) => {
-                // Tutup jika mengklik background overlay (e.target adalah modal itu sendiri)
                 if (e.target === previewModal) {
                     closePreview();
                 }
             });
 
-            // Panggil fungsi untuk membuat tombol template
             createTemplateButtons(); 
 
-            // Action Listeners
-            generateBtn.addEventListener('click', handleGenerateClick); // handleGenerateClick sudah async
+            generateBtn.addEventListener('click', handleGenerateClick);
             downloadBtn.addEventListener('click', handleDownloadZip);
 
-            // Inisialiasasi: Tampilkan panel 'single' dan tampilan 'canvas' saat dimuat
+            // Panggil handleModeChange saat init untuk memastikan state UI benar
+            // (panel 'single' harus terlihat, panel 'template' tersembunyi)
             handleModeChange({ target: { value: 'single' } });
             
-            // (PERUBAHAN) Inisialisasi DB saat load dan set tampilan awal
             getDB().then(() => {
                 console.log("Database riwayat berhasil diinisialisasi.");
-                switchView('canvas'); // Set initial view
+                switchView('canvas');
             }).catch(err => {
                 console.error("Gagal inisialisasi database:", err);
                 showMessage("Gagal memuat database riwayat.", "error");
-                switchView('canvas'); // Tetap set tampilan awal
+                switchView('canvas');
             });
         });
     </script>
