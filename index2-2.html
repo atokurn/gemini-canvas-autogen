@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Generative Canvas</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JSZip untuk export ZIP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Font dan Styling Kustom -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@600;700&display=swap');
+        
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --neutral-dark: #1f2937;
+            --neutral-light: #f9fafb;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            @apply bg-neutral-light text-neutral-900;
+        }
+        
+        h1, h2 {
+            font-family: 'Geist', sans-serif;
+        }
+
+        /* Custom styling untuk radio button mode tabs */
+        .mode-radio:checked + label {
+            @apply bg-blue-500 text-white border-blue-500;
+        }
+        .mode-radio { display: none; }
+        
+        /* Enhanced scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            @apply bg-slate-100 rounded-lg;
+        }
+        ::-webkit-scrollbar-thumb {
+            @apply bg-slate-400 rounded-lg hover:bg-slate-500;
+        }
+        
+        /* Improved spinner animation */
+        .spinner {
+            @apply border-4 border-slate-200 w-10 h-10 rounded-full;
+            border-left-color: var(--primary);
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Smooth transitions */
+        button, input, select, textarea {
+            @apply transition-all duration-200;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+
+    <div class="flex flex-col lg:flex-row min-h-screen lg:h-screen lg:overflow-hidden">
+        
+        <!-- Enhanced Control Panel with modern styling -->
+        <aside class="w-full lg:w-1/3 xl:w-1/4 bg-white lg:h-screen shadow-xl lg:shadow-2xl flex flex-col border-r border-slate-200">
+            <div class="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+                
+                <!-- Modern header with gradient icon -->
+                <header class="mb-6 pb-4 border-b-2 border-slate-200">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-white text-lg font-bold">
+                            ✨
+                        </div>
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">Canvas AI</h1>
+                    </div>
+                    <p class="text-xs text-slate-500">Generasi gambar dengan teknologi Gemini</p>
+                </header>
+
+                <!-- (MOVED) Notification Area -->
+                <div id="message-box" class="hidden p-3 rounded-lg text-sm font-medium text-center border"></div>
+
+                <!-- Mode selector with enhanced styling -->
+                <section>
+                    <label class="text-sm font-semibold text-slate-700 mb-2 block">Mode Input</label>
+                    <div class="flex gap-1 p-1 bg-slate-100 rounded-lg border border-slate-200">
+                        <input type="radio" id="mode-single" name="mode" value="single" class="mode-radio" checked>
+                        <label for="mode-single" class="flex-1 text-center py-2 px-4 cursor-pointer rounded-md font-medium text-sm transition-all duration-200 hover:bg-slate-200 text-slate-700">Single</label>
+                        
+                        <input type="radio" id="mode-template" name="mode" value="template" class="mode-radio">
+                        <label for="mode-template" class="flex-1 text-center py-2 px-4 cursor-pointer rounded-md font-medium text-sm transition-all duration-200 hover:bg-slate-200 text-slate-700">Template</label>
+                        
+                        <!-- (BARU) Mode List -->
+                        <input type="radio" id="mode-list" name="mode" value="list" class="mode-radio">
+                        <label for="mode-list" class="flex-1 text-center py-2 px-4 cursor-pointer rounded-md font-medium text-sm transition-all duration-200 hover:bg-slate-200 text-slate-700">List</label>
+                    </div>
+                </section>
+
+                <!-- Input panels with enhanced styling -->
+                <section class="space-y-4">
+                    <!-- Single Prompt Mode (MOVED TO BOTTOM) -->
+                    
+                    <!-- Template Mode -->
+                    <div id="panel-template" class="hidden">
+                        <label class="text-sm font-semibold text-slate-700 mb-2 block">Pilih Template Gaya</label>
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-xs text-slate-500">Pilih template dan masukkan subjek di bawah.</p>
+                            <!-- (BARU) Tombol Sinkronisasi -->
+                            <button id="sync-templates-btn" class="p-1.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors" title="Sinkronisasi Template">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.22c0-2.6-1.4-5-3.6-6.2.9-.3 1.9-.3 2.8 0l-4.4 4.4c-.9.9-2.3.9-3.2 0L9.4 7.2C8.5 6.3 7 6.3 6.1 7.2L1.7 11.6c-.9.9-.9 2.3 0 3.2l4.4 4.4c.9.9 2.3.9 3.2 0l1-1m5.2-1.9-4.4-4.4c-.9-.9-2.3-.9-3.2 0L7.2 13.3c-.9.9-.9 2.3 0 3.2l4.4 4.4c.9.9 2.3.9 3.2 0l4.4-4.4c.9-.9.9-2.3 0-3.2Z"/></svg>
+                            </button>
+                        </div>
+                        <div id="template-buttons" class="grid grid-cols-2 gap-2"></div>
+                    </div>
+                    
+                    <!-- (BARU) Panel Mode List -->
+                    <div id="panel-list" class="hidden space-y-3">
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <label class="text-sm font-semibold text-slate-700 block">Status Batch</label>
+                            <p class="text-xs text-slate-500 mt-1 mb-2">Ambil daftar prompt dari Google Sheet.</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-medium text-slate-600">Total Prompt:</span>
+                                <span id="list-total-count" class="font-bold text-blue-600">0</span>
+                            </div>
+                            <div class="flex items-center justify-between mt-1">
+                                <span class="text-xs font-medium text-slate-600">Sedang Berjalan:</span>
+                                <span id="list-current-prompt" class="font-bold text-slate-800 text-xs truncate">N/A</span>
+                            </div>
+                            <button id="sync-list-btn" class="w-full mt-3 text-xs text-center py-1.5 px-3 rounded-md font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-colors">
+                                Sinkronisasi Daftar Prompt
+                            </button>
+                        </div>
+                        
+                        <div class="p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
+                            <label for="list-interval-time" class="text-xs font-medium text-slate-700 block mb-2">Interval Antar Prompt (detik)</label>
+                            <input type="number" id="list-interval-time" value="5" min="1" class="w-full p-2 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                        </div>
+                        
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <div class="flex items-center justify-between">
+                                <label for="list-auto-download" class="text-sm font-semibold text-slate-700">Unduh Otomatis</label>
+                                <input type="checkbox" id="list-auto-download" class="form-checkbox h-5 w-5 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500">
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Unduh setiap gambar secara otomatis setelah selesai.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Enhanced options section -->
+                <section class="space-y-3">
+                    <h2 class="text-sm font-semibold text-slate-700">Pengaturan</h2>
+                    
+                    <div id="optimizer-container" class="p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
+                        <label for="select-optimizer" class="text-xs font-medium text-slate-700 block mb-2">Optimasi Prompt</label>
+                        <select id="select-optimizer" class="w-full p-2 border border-slate-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                            <option value="off">Tidak (Gunakan Asli)</option>
+                            <option value="image">Ya (Per Gambar)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <div id="image-count-container" class="flex-1 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
+                            <label for="image-count" class="text-xs font-medium text-slate-700 block mb-2">Jumlah Gambar</label>
+                            <input type="number" id="image-count" value="1" min="1" max="10" class="w-full p-2 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                        </div>
+                        <div id="aspect-ratio-container" class="flex-1 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
+                            <label for="select-aspect-ratio" class="text-xs font-medium text-slate-700 block mb-2">Rasio Aspek</label>
+                            <select id="select-aspect-ratio" class="w-full p-2 border border-slate-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                                <option value="1:1">1:1</option>
+                                <option value="16:9">16:9</option>
+                                <option value="9:16">9:16</option>
+                                <option value="4:3">4:3</option>
+                                <option value="3:4">3:4</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Subject Reference with modern styling -->
+                    <div id="subject-reference-container" class="p-3 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 hover:border-blue-400 transition-colors">
+                        <label for="upload-subject" class="text-xs font-semibold text-slate-700 mb-2 block">Referensi Subjek</label>
+                        <input type="file" id="upload-subject" accept="image/*" multiple class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600 cursor-pointer">
+                        <div id="subject-preview-container" class="hidden mt-2 flex flex-wrap gap-2"></div>
+                        <button id="clear-subject" class="hidden text-xs text-red-500 hover:text-red-700 mt-2 w-full text-center font-medium">Hapus</button>
+                        <p class="text-xs text-slate-500 mt-2">Gunakan untuk mempertahankan bentuk objek utama</p>
+                    </div>
+
+                    <!-- Style Reference with modern styling -->
+                    <div id="style-reference-container" class="p-3 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 hover:border-cyan-400 transition-colors">
+                        <label for="upload-style" class="text-xs font-semibold text-slate-700 mb-2 block">Referensi Gaya</label>
+                        <input type="file" id="upload-style" accept="image/*" multiple class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-cyan-500 file:text-white hover:file:bg-cyan-600 cursor-pointer">
+                        <div id="style-preview-container" class="hidden mt-2 flex flex-wrap gap-2"></div>
+                        <button id="clear-style" class="hidden text-xs text-red-500 hover:text-red-700 mt-2 w-full text-center font-medium">Hapus</button>
+                        <p class="text-xs text-slate-500 mt-2">Gunakan untuk tone, warna, dan tekstur</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Enhanced action buttons section -->
+            <section class="p-4 lg:p-6 border-t-2 border-slate-200 space-y-3 bg-gradient-to-t from-slate-50 to-white">
+                
+                <!-- (MOVED) Single Prompt Mode -->
+                <div id="panel-single">
+                    <label for="prompt-single" class="text-sm font-semibold text-slate-700 mb-2 block">Deskripsi Gambar</label>
+                    <textarea id="prompt-single" rows="5" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white placeholder:text-slate-400 text-sm resize-none" placeholder="Misalnya: Kucing berwarna emas sedang bermain di taman cyberpunk dengan cahaya neon biru dan merah..."></textarea>
+                </div>
+
+                <button id="generate-btn" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 active:scale-95">
+                    <svg id="generate-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9 1.9 5.8 1.9-5.8 5.8-1.9-5.8-1.9z"/></svg>
+                    <span id="generate-btn-text">Hasilkan Gambar</span>
+                </button>
+                <!-- (MOVED) Message box was here -->
+            </section>
+        </aside>
+
+        <!-- Enhanced Canvas Output with modern styling -->
+        <main class="w-full lg:w-2/3 xl:w-3/4 p-4 lg:p-8 min-h-screen lg:h-screen lg:overflow-y-auto">
+            <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 pb-6 border-b-2 border-slate-200">
+                <div class="flex items-center gap-6 mb-4 sm:mb-0">
+                    <h2 id="canvas-view-title" class="text-2xl font-bold text-slate-900 cursor-pointer pb-2 border-b-3 border-blue-500 transition-colors hover:text-blue-600">Hasil</h2>
+                    <h2 id="history-view-title" class="text-2xl font-medium text-slate-400 cursor-pointer pb-2 transition-colors hover:text-slate-600">Riwayat</h2>
+                </div>
+                <button id="download-btn" class="hidden bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-2 px-5 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+                    Download All (ZIP)
+                </button>
+            </header>
+
+            <!-- Enhanced grid layout with modern card styling -->
+            <div id="output-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+            
+            <div id="history-container" class="hidden space-y-4"></div>
+        </main>
+    </div>
+
+    <!-- Enhanced preview modal with download and close buttons -->
+    <div id="preview-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="relative bg-white rounded-xl shadow-2xl max-w-4xl max-h-[90vh] overflow-hidden">
+            <!-- Button container with both download and close buttons positioned at top -->
+            <div class="absolute top-4 right-4 flex gap-2 z-10">
+                <!-- Download Button (New) -->
+                <button id="download-preview-btn" class="p-2 rounded-full bg-black/50 hover:bg-green-600 text-white hover:shadow-lg transition-all duration-200 active:scale-95" title="Download Image">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+                <!-- Close Button (Improved) -->
+                <button id="close-modal-btn" class="p-2 rounded-full bg-black/50 hover:bg-red-600 text-white hover:shadow-lg transition-all duration-200 active:scale-95" title="Close Preview">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <img id="modal-image" src="/placeholder.svg" alt="Pratinjau" class="w-full h-auto object-contain max-h-[85vh] rounded-lg">
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // === KONSTANTA API ===
+            const API_KEY = ""; 
+            const API_URL_TEXT_GEN = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
+            const API_URL_IMAGE_GEN = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
+            const API_URL_IMAGE_EDIT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${API_KEY}`; 
+
+            // === REFERENSI DOM ===
+            const modeRadios = document.querySelectorAll('input[name="mode"]');
+            const panels = {
+                single: document.getElementById('panel-single'),
+                template: document.getElementById('panel-template'),
+                list: document.getElementById('panel-list'), // (BARU) Panel List
+            };
+            const inputs = {
+                single: document.getElementById('prompt-single'),
+            };
+            const templateButtonsContainer = document.getElementById('template-buttons');
+            const syncTemplatesBtn = document.getElementById('sync-templates-btn'); // (BARU) Tombol Sync Template
+            
+            // (BARU) DOM Referensi untuk Panel List
+            const syncListBtn = document.getElementById('sync-list-btn');
+            const listTotalCount = document.getElementById('list-total-count');
+            const listCurrentPrompt = document.getElementById('list-current-prompt');
+            const listIntervalTime = document.getElementById('list-interval-time');
+            const listAutoDownload = document.getElementById('list-auto-download');
+
+            // (BARU) DOM Referensi untuk Pengaturan yang akan disembunyikan
+            const optimizerContainer = document.getElementById('optimizer-container');
+            const styleReferenceContainer = document.getElementById('style-reference-container');
+            const subjectReferenceContainer = document.getElementById('subject-reference-container'); // (BARU)
+            const imageCountContainer = document.getElementById('image-count-container'); // (BARU)
+            const aspectRatioContainer = document.getElementById('aspect-ratio-container'); // (BARU)
+
+            // DOM Referensi untuk Referensi Subjek (Multi)
+            const uploadSubject = document.getElementById('upload-subject');
+            const subjectPreviewContainer = document.getElementById('subject-preview-container');
+            const clearSubjectBtn = document.getElementById('clear-subject');
+
+            // DOM Referensi untuk Referensi Gaya (Multi)
+            const uploadStyle = document.getElementById('upload-style');
+            const stylePreviewContainer = document.getElementById('style-preview-container');
+            const clearStyleBtn = document.getElementById('clear-style');
+
+            const generateBtn = document.getElementById('generate-btn');
+            const generateBtnText = document.getElementById('generate-btn-text');
+            const generateIcon = document.getElementById('generate-icon');
+            const downloadBtn = document.getElementById('download-btn');
+            const outputGrid = document.getElementById('output-grid');
+            const messageBox = document.getElementById('message-box');
+
+            const canvasViewTitle = document.getElementById('canvas-view-title');
+            const historyViewTitle = document.getElementById('history-view-title');
+            const historyContainer = document.getElementById('history-container');
+            
+            const previewModal = document.getElementById('preview-modal');
+            const modalImage = document.getElementById('modal-image');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const downloadPreviewBtn = document.getElementById('download-preview-btn');
+
+            let currentView = 'canvas'; 
+
+            // === STATE APLIKASI ===
+            let currentMode = 'single';
+            let styleReferenceBase64s = []; 
+            let subjectReferenceBase64s = []; 
+            let generatedImages = [];
+            let isGenerating = false;
+            let selectedTemplatePrompt = null; 
+            let fetchedTemplates = []; 
+
+            // (BARU) State untuk Mode List
+            let isBatchRunning = false;
+            let currentBatchIndex = 0;
+            let batchTimeoutId = null;
+
+            // === LOGIKA INDEXEDDB UNTUK HISTORY ===
+            
+            let db; 
+            const DB_NAME = 'GeminiCanvasHistoryDB';
+            const STORE_NAME = 'images';
+            const DB_VERSION = 1;
+            const MAX_HISTORY_ITEMS = 50; 
+
+            function getDB() {
+                return new Promise((resolve, reject) => {
+                    if (db) {
+                        return resolve(db);
+                    }
+                    const request = indexedDB.open(DB_NAME, DB_VERSION);
+                    request.onupgradeneeded = (e) => {
+                        const dbInstance = e.target.result;
+                        if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
+                            const store = dbInstance.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                            store.createIndex('timestamp', 'timestamp', { unique: false });
+                        }
+                    };
+                    request.onsuccess = (e) => {
+                        db = e.target.result;
+                        resolve(db);
+                    };
+                    request.onerror = (e) => {
+                        console.error("IndexedDB error:", e.target.error);
+                        reject(e.target.error);
+                    };
+                });
+            }
+
+            async function saveImageToHistory(item) {
+                try {
+                    const dbInstance = await getDB();
+                    const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    const request = store.add(item);
+                    await new Promise((resolve, reject) => {
+                        request.onsuccess = resolve;
+                        request.onerror = (e) => {
+                            console.error("Gagal menyimpan ke IndexedDB:", e.target.error);
+                            reject(e.target.error);
+                        };
+                    });
+                } catch (error) {
+                    console.error("Error dalam saveImageToHistory:", error);
+                }
+            }
+
+            async function loadHistory() {
+                try {
+                    const dbInstance = await getDB();
+                    const tx = dbInstance.transaction(STORE_NAME, 'readonly');
+                    const store = tx.objectStore(STORE_NAME);
+                    const timestampIndex = store.index('timestamp');
+                    const request = timestampIndex.getAll();
+                    const result = await new Promise((resolve, reject) => {
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = (e) => {
+                            console.error("Gagal memuat dari IndexedDB:", e.target.error);
+                            reject(e.target.error);
+                        };
+                    });
+                    result.sort((a, b) => b.timestamp - a.timestamp);
+                    return result.slice(0, MAX_HISTORY_ITEMS);
+                } catch (error) {
+                    console.error("Error dalam loadHistory:", error);
+                    return [];
+                }
+            }
+
+            // === FUNGSI UTILITAS ===
+
+            let messageTimeout;
+            function showMessage(message, type = 'info') {
+                if (!messageBox) return;
+                if (messageTimeout) clearTimeout(messageTimeout);
+                messageBox.classList.remove('text-green-800', 'bg-green-100', 'border-green-300', 'text-red-800', 'bg-red-100', 'border-red-300', 'text-blue-800', 'bg-blue-100', 'border-blue-300', 'animate-pulse');
+                switch (type) {
+                    case 'success':
+                        messageBox.classList.add('text-green-800', 'bg-green-100', 'border-green-300');
+                        break;
+                    case 'error':
+                        messageBox.classList.add('text-red-800', 'bg-red-100', 'border-red-300');
+                        break;
+                    case 'info':
+                    default:
+                        messageBox.classList.add('text-blue-800', 'bg-blue-100', 'border-blue-300');
+                        break;
+                }
+                messageBox.textContent = message;
+                messageBox.classList.remove('hidden');
+                if (message.startsWith('Memuat') || message.startsWith('Batch berjalan')) {
+                     messageBox.classList.add('animate-pulse');
+                } else {
+                    messageTimeout = setTimeout(() => {
+                        messageBox.classList.add('hidden');
+                    }, 4000);
+                }
+            }
+
+            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+            async function fetchWithRetry(url, options, maxRetries = 4) {
+                let attempt = 0;
+                while (attempt < maxRetries) {
+                    try {
+                        const response = await fetch(url, options);
+                        if (!response.ok) {
+                            if (response.status === 429 || response.status >= 500) {
+                                throw new Error(`HTTP error ${response.status}`);
+                            } else {
+                                const result = await response.json();
+                                console.error("API Error:", result);
+                                showMessage(`Error API: ${result.error?.message || response.statusText}`, 'error');
+                                return null;
+                            }
+                        }
+                        return await response.json();
+                    } catch (error) {
+                        attempt++;
+                        if (attempt >= maxRetries) {
+                            console.error("Fetch gagal setelah retry:", error);
+                            showMessage("Permintaan API gagal, silakan coba lagi.", 'error');
+                            return null;
+                        }
+                        const delayTime = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                        await delay(delayTime);
+                    }
+                }
+                return null;
+            }
+
+            function copyToClipboard(text) {
+                if (!text) return;
+                try {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed"; 
+                    textArea.style.opacity = 0;
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        showMessage("Prompt disalin ke clipboard!", 'success');
+                    } else {
+                        throw new Error('Gagal menyalin');
+                    }
+                    document.body.removeChild(textArea);
+                } catch (err) {
+                    console.error('Gagal menyalin: ', err);
+                    showMessage("Gagal menyalin prompt.", 'error');
+                }
+            }
+
+            function downloadBase64File(base64Data, filename) {
+                const link = document.createElement('a');
+                link.href = base64Data;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            }
+
+            function handleImageUpload(event, base64Array, previewContainer, clearButton) {
+                const files = event.target.files;
+                if (!files) return;
+                base64Array.length = 0;
+                previewContainer.innerHTML = '';
+                previewContainer.classList.add('hidden');
+                clearButton.classList.add('hidden');
+                if (files.length > 0) {
+                    previewContainer.classList.remove('hidden');
+                    clearButton.classList.remove('hidden');
+                    Array.from(files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const base64String = e.target.result;
+                            base64Array.push(base64String.split(',')[1]);
+                            const img = document.createElement('img');
+                            img.src = base64String;
+                            img.className = 'w-12 h-12 object-cover rounded-md border-2 border-slate-300';
+                            previewContainer.appendChild(img);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                }
+            }
+
+            function clearImageReferences(base64Array, inputElement, previewContainer, clearButton) {
+                base64Array.length = 0;
+                inputElement.value = '';
+                previewContainer.innerHTML = '';
+                previewContainer.classList.add('hidden');
+                clearButton.classList.add('hidden');
+            }
+            
+            async function renderHistory() {
+                historyContainer.innerHTML = '';
+                const history = await loadHistory();
+                if (history.length === 0) {
+                    historyContainer.innerHTML = `<p class="text-center text-slate-500 py-10">Tidak ada riwayat. Hasilkan gambar untuk memulai!</p>`;
+                    return;
+                }
+                history.forEach(item => {
+                    const date = new Date(item.timestamp).toLocaleString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    const historyCard = document.createElement('div');
+                    historyCard.className = 'flex flex-col sm:flex-row bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow border border-slate-200';
+                    historyCard.innerHTML = `
+                        <img src="${item.base64}" alt="History Image" class="history-preview-img w-full sm:w-24 h-auto sm:h-24 object-cover rounded-md mb-3 sm:mb-0 sm:mr-4 border border-slate-300 cursor-pointer">
+                        <div class="flex-1">
+                            <p class="text-xs text-slate-500 mb-1">${date} - ID: ${item.id.substring(0, 8)}</p>
+                            <p class="font-medium text-slate-800 line-clamp-3" title="${item.prompt}">${item.prompt}</p>
+                        </div>
+                        <div class="flex sm:flex-col justify-end gap-2 mt-3 sm:mt-0 sm:ml-4">
+                            <div class="relative group">
+                                <button data-base64="${item.base64}" data-index="${item.id.substring(0, 8)}" class="history-download-btn p-2 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </button>
+                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Unduh</span>
+                            </div>
+                            <div class="relative group">
+                                <button class="history-copy-prompt-btn p-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                </button>
+                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Salin Prompt</span>
+                            </div>
+                        </div>
+                    `;
+                    historyContainer.appendChild(historyCard);
+                    historyCard.querySelector('.history-preview-img').addEventListener('click', (e) => openPreview(e.target.src));
+                    historyCard.querySelector('.history-copy-prompt-btn').addEventListener('click', () => copyToClipboard(item.prompt));
+                });
+                historyContainer.querySelectorAll('.history-download-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const base64 = e.currentTarget.dataset.base64;
+                        const id = e.currentTarget.dataset.index;
+                        downloadBase64File(base64, `history_image_${id}.png`);
+                        showMessage(`Gambar riwayat ${id} diunduh.`, 'success');
+                    });
+                });
+            }
+
+            async function switchView(view) {
+                currentView = view;
+                if (view === 'canvas') {
+                    outputGrid.classList.remove('hidden');
+                    historyContainer.classList.add('hidden');
+                    canvasViewTitle.classList.add('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
+                    canvasViewTitle.classList.remove('text-slate-400', 'hover:text-slate-600', 'font-medium');
+                    historyViewTitle.classList.remove('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
+                    historyViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-medium');
+                    if (generatedImages.some(img => img.base64)) downloadBtn.classList.remove('hidden'); else downloadBtn.classList.add('hidden');
+                } else {
+                    outputGrid.classList.add('hidden');
+                    historyContainer.classList.remove('hidden');
+                    historyViewTitle.classList.add('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
+                    historyViewTitle.classList.remove('text-slate-400', 'hover:text-slate-600', 'font-medium');
+                    canvasViewTitle.classList.remove('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
+                    canvasViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-medium');
+                    downloadBtn.classList.add('hidden');
+                    await renderHistory();
+                }
+            }
+
+            function openPreview(imageUrl) {
+                if (imageUrl) {
+                    modalImage.src = imageUrl;
+                    previewModal.classList.remove('hidden');
+                    previewModal.dataset.currentImageUrl = imageUrl;
+                }
+            }
+
+            function closePreview() {
+                previewModal.classList.add('hidden');
+                modalImage.src = '';
+                previewModal.dataset.currentImageUrl = '';
+            }
+
+            // === FUNGSI INTI ===
+            
+            async function fetchAndRenderTemplates() {
+                showMessage("Memuat template dari Google Sheet...", 'info');
+                const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTV-HBT1ra1sdrTL_2DjT_wFvdASQILFfwmZx4nYmR-uv-8Y8rturIAWlKWqnDQBeLr65NpgiYpKV2K/pub?output=csv";
+                try {
+                    const response = await fetch(csvUrl);
+                    if (!response.ok) throw new Error(`Gagal mengambil CSV: ${response.statusText}`);
+                    const csvText = await response.text();
+                    const lines = csvText.trim().split('\n');
+                    lines.shift(); 
+                    
+                    const templates = lines.map(line => {
+                        const values = [];
+                        let inQuote = false;
+                        let field = '';
+                        for (let i = 0; i < line.length; i++) {
+                            const char = line[i];
+                            if (char === '"') inQuote = !inQuote;
+                            else if (char === ',' && !inQuote) { values.push(field.trim().replace(/^"|"$/g, '')); field = ''; }
+                            else field += char;
+                        }
+                        values.push(field.trim().replace(/^"|"$/g, ''));
+                        
+                        if (values.length >= 3) {
+                            if (values.length >= 4) {
+                                return { category: values[0] || "Lainnya", name: values[1], description: values[2], prompt: values[3] };
+                            } else {
+                                return { category: "Lainnya", name: values[0], description: values[1], prompt: values[2] };
+                            }
+                        }
+                        return null;
+                    }).filter(t => t && t.name && t.prompt);
+
+                    fetchedTemplates = templates; // Simpan di state global
+                    showMessage(`Berhasil memuat ${templates.length} template.`, 'success');
+                    renderTemplateButtons(templates); // Render tombol template
+                    listTotalCount.textContent = templates.length; // (BARU) Update total list
+                } catch (error) {
+                    console.error("Gagal memuat template:", error);
+                    showMessage("Gagal memuat template. Menggunakan daftar kosong.", 'error');
+                    fetchedTemplates = [];
+                    renderTemplateButtons([]);
+                    listTotalCount.textContent = 0;
+                }
+            }
+
+            async function optimizePrompt(userPrompt) {
+                const systemPrompt = `You are a creative prompt optimizer for an AI image generator. 
+                Your task is to take a user's prompt and rewrite it to be more descriptive, vivid, and evocative. 
+                Do NOT change the core subject or meaning. 
+                Add details about lighting, style, and composition.
+                Respond ONLY with the new, optimized prompt.`;
+                const payload = {
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                };
+                const result = await fetchWithRetry(API_URL_TEXT_GEN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (result && result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    return result.candidates[0].content.parts[0].text.trim();
+                } else {
+                    console.warn("Optimasi prompt gagal, menggunakan prompt asli.");
+                    return userPrompt;
+                }
+            }
+
+            async function generateImage(finalPrompt, aspectRatio, subjectRefs, styleRefs) {
+                const useMultimodal = subjectRefs.length > 0 || styleRefs.length > 0;
+                let apiUrl, payload;
+
+                if (useMultimodal) {
+                    apiUrl = API_URL_IMAGE_EDIT;
+                    let parts = [];
+                    const multimodalPrompt = `${finalPrompt}\n\n[Instruksi Tambahan: Hasilkan gambar dengan rasio aspek ${aspectRatio}]`;
+                    parts.push({ text: multimodalPrompt });
+                    subjectRefs.forEach(base64Data => parts.push({ inlineData: { mimeType: "image/png", data: base64Data } }));
+                    styleRefs.forEach(base64Data => {
+                        parts.push({ text: "Gunakan gambar berikut sebagai referensi gaya:" });
+                        parts.push({ inlineData: { mimeType: "image/png", data: base64Data } });
+                    });
+                    payload = {
+                        contents: [{ parts: parts }],
+                        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+                    };
+                } else {
+                    apiUrl = API_URL_IMAGE_GEN;
+                    payload = {
+                        instances: [{ prompt: finalPrompt }],
+                        parameters: { sampleCount: 1, aspectRatio: aspectRatio }
+                    };
+                }
+                const result = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (useMultimodal) {
+                    const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                    return base64Data ? `data:image/png;base64,${base64Data}` : null;
+                } else {
+                    const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
+                    return base64Data ? `data:image/png;base64,${base64Data}` : null;
+                }
+            }
+
+            function renderTemplateButtons(templates) {
+                templateButtonsContainer.innerHTML = '';
+                const groupedTemplates = templates.reduce((acc, template) => {
+                    const category = template.category || 'Lainnya';
+                    if (!acc[category]) acc[category] = [];
+                    acc[category].push(template);
+                    return acc;
+                }, {});
+                for (const category in groupedTemplates) {
+                    const header = document.createElement('h3');
+                    header.className = 'text-xs font-semibold text-slate-500 uppercase tracking-wide col-span-2 mt-4 first:mt-0';
+                    header.textContent = category;
+                    templateButtonsContainer.appendChild(header);
+                    groupedTemplates[category].forEach((template) => {
+                        const button = document.createElement('button');
+                        button.className = 'template-btn bg-slate-200 hover:bg-blue-100 text-slate-800 p-3 rounded-lg text-sm font-medium transition-colors text-left border border-slate-300';
+                        button.innerHTML = `<span class="font-bold">${template.name}</span><p class="text-xs text-slate-600 mt-1">${template.description}</p>`;
+                        button.dataset.prompt = template.prompt;
+                        button.dataset.name = template.name; 
+                        button.addEventListener('click', handleTemplateClick);
+                        templateButtonsContainer.appendChild(button);
+                    });
+                }
+                if (templates.length === 0) {
+                     templateButtonsContainer.innerHTML = '<p class="text-xs text-slate-500 col-span-2">Tidak ada template yang dapat dimuat.</p>';
+                }
+            }
+
+            function handleTemplateClick(e) {
+                e.preventDefault(); 
+                const templatePrompt = e.currentTarget.dataset.prompt;
+                const templateName = e.currentTarget.dataset.name;
+                if (!templatePrompt) return;
+                selectedTemplatePrompt = templatePrompt;
+                document.querySelectorAll('.template-btn').forEach(btn => {
+                    btn.classList.remove('bg-blue-500', 'text-white', 'border-blue-500');
+                    btn.classList.add('bg-slate-200', 'text-slate-800');
+                });
+                e.currentTarget.classList.add('bg-blue-500', 'text-white', 'border-blue-500');
+                e.currentTarget.classList.remove('bg-slate-200', 'text-slate-800');
+                generateBtn.disabled = false;
+                generateBtnText.textContent = 'Hasilkan Gambar';
+                showMessage(`Template '${templateName}' dipilih. Masukkan subjek di bawah.`, 'info');
+                inputs.single.focus();
+            }
+
+            /**
+             * (DIMODIFIKASI) Menangani perubahan mode input (Single, Template, List).
+             */
+            function handleModeChange(e) {
+                currentMode = e.target.value;
+                
+                // Sembunyikan semua panel dan pengaturan khusus mode
+                Object.values(panels).forEach(p => p.classList.add('hidden'));
+                optimizerContainer.classList.add('hidden');
+                styleReferenceContainer.classList.add('hidden');
+                subjectReferenceContainer.classList.add('hidden');
+                imageCountContainer.classList.add('hidden');
+                aspectRatioContainer.classList.add('hidden');
+
+                // Hapus highlight template
+                selectedTemplatePrompt = null;
+                document.querySelectorAll('.template-btn').forEach(btn => {
+                    btn.classList.remove('bg-blue-500', 'text-white', 'border-blue-500');
+                    btn.classList.add('bg-slate-200', 'text-slate-800');
+                });
+
+                if (isBatchRunning) {
+                    stopBatchGeneration(); // (BARU) Hentikan batch jika beralih mode
+                }
+
+                switch (currentMode) {
+                    case 'single':
+                        panels.single.classList.remove('hidden');
+                        optimizerContainer.classList.remove('hidden');
+                        styleReferenceContainer.classList.remove('hidden');
+                        subjectReferenceContainer.classList.remove('hidden');
+                        imageCountContainer.classList.remove('hidden');
+                        aspectRatioContainer.classList.remove('hidden');
+                        
+                        panels.single.querySelector('label').textContent = 'Deskripsi Gambar';
+                        inputs.single.placeholder = 'Misalnya: Kucing berwarna emas sedang bermain di taman cyberpunk...';
+                        generateBtnText.textContent = 'Hasilkan Gambar';
+                        break;
+                    case 'template':
+                        panels.template.classList.remove('hidden');
+                        panels.single.classList.remove('hidden'); // Input subjek
+                        subjectReferenceContainer.classList.remove('hidden'); // Referensi subjek
+                        imageCountContainer.classList.remove('hidden');
+                        aspectRatioContainer.classList.remove('hidden');
+                        // (optimizer dan style ref tetap tersembunyi)
+
+                        panels.single.querySelector('label').textContent = 'Subjek (untuk Template)';
+                        inputs.single.placeholder = 'Masukkan subjek untuk template yang dipilih, mis: "Anjing golden retriever"';
+                        generateBtnText.textContent = 'Hasilkan Gambar';
+                        break;
+                    case 'list': // (BARU) Mode List
+                        panels.list.classList.remove('hidden');
+                        // (Sesuai permintaan: sembunyikan input text)
+                        // panels.single.classList.add('hidden'); 
+                        
+                        // (Sesuai permintaan: tampilkan pengaturan ini)
+                        styleReferenceContainer.classList.remove('hidden');
+                        imageCountContainer.classList.remove('hidden');
+                        aspectRatioContainer.classList.remove('hidden');
+                        // (Sesuai permintaan: sembunyikan input text & optimasi)
+                        panels.single.classList.add('hidden');
+                        optimizerContainer.classList.add('hidden');
+                        subjectReferenceContainer.classList.add('hidden'); // Sembunyikan ref subjek di mode batch
+
+                        listTotalCount.textContent = fetchedTemplates.length;
+                        listCurrentPrompt.textContent = 'N/A';
+                        generateBtnText.textContent = 'Mulai Batch';
+                        break;
+                }
+            }
+
+            function createPlaceholderCard(initialPrompt, index) {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-lg shadow-md overflow-hidden";
+                card.dataset.index = index;
+                card.dataset.prompt = initialPrompt; 
+                card.innerHTML = `
+                    <div class="aspect-square bg-slate-200 flex items-center justify-center relative">
+                        <div class="spinner"></div>
+                        <img src="/placeholder.svg" alt="Generated Image" class="hidden w-full h-full object-cover">
+                    </div>
+                    <div class="p-4">
+                        <p class="card-prompt text-sm text-slate-600 mb-3 line-clamp-3" title="${initialPrompt}">${initialPrompt}</p>
+                        <div class="flex justify-end gap-2 mt-2">
+                            <div class="relative group">
+                                <button class="download-single-btn p-2 rounded-full bg-green-500 hover:bg-green-600 text-white disabled:bg-gray-400 disabled:text-gray-200 transition-colors" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </button>
+                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Unduh Gambar</span>
+                            </div>
+                            <div class="relative group">
+                                <button class="regenerate-btn p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:text-gray-400 transition-colors" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M2.5 22v-6h6"/><path d="M21.5 13a9.7 9.7 0 0 0-4.6-7.5l-2.5 2.5"/><path d="M2.5 11a9.7 9.7 0 0 1 4.6 7.5l2.5-2.5"/></svg>
+                                </button>
+                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Regenerate</span>
+                            </div>
+                            <div class="relative group">
+                                <button class="copy-prompt-btn p-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 disabled:text-gray-400 transition-colors" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                </button>
+                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Salin Prompt</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                const imgElement = card.querySelector('img');
+                imgElement.addEventListener('click', () => { if (imgElement.src && !imgElement.classList.contains('hidden')) openPreview(imgElement.src); });
+                const downloadSingleBtn = card.querySelector('.download-single-btn');
+                downloadSingleBtn.addEventListener('click', () => {
+                    const base64 = card.dataset.base64;
+                    if (base64) {
+                        const index = card.dataset.index;
+                        downloadBase64File(base64, `gemini_image_${parseInt(index) + 1}.png`);
+                        showMessage(`Gambar ${parseInt(index) + 1} diunduh.`, 'success');
+                    }
+                });
+                card.querySelector('.regenerate-btn').addEventListener('click', async () => await handleRegenerate(card));
+                const copyBtn = card.querySelector('.copy-prompt-btn');
+                copyBtn.addEventListener('click', () => { const promptText = card.querySelector('.card-prompt').textContent; copyToClipboard(promptText); });
+                return card;
+            }
+
+            /**
+             * (DIMODIFIKASI) Menangani klik tombol "Generate" utama.
+             */
+            async function handleGenerateClick() {
+                if (isGenerating && currentMode !== 'list') return;
+
+                // (BARU) Logika Mode List
+                if (currentMode === 'list') {
+                    if (isBatchRunning) {
+                        stopBatchGeneration();
+                    } else {
+                        await startBatchGeneration();
+                    }
+                    return;
+                }
+
+                // Logika Mode Single & Template
+                let originalPrompt = "";
+                const subject = inputs.single.value.trim(); 
+
+                if (currentMode === 'single') {
+                    if (!subject) {
+                        showMessage("Silakan masukkan deskripsi gambar.", 'error');
+                        return;
+                    }
+                    originalPrompt = subject;
+                } else { // mode 'template'
+                    if (!selectedTemplatePrompt) {
+                        showMessage("Silakan pilih template dari daftar.", 'error');
+                        return;
+                    }
+                    if (!subject && subjectReferenceBase64s.length === 0) { 
+                        showMessage("Silakan masukkan subjek (teks) ATAU unggah referensi subjek (gambar) untuk template.", 'error');
+                        return;
+                    }
+                    originalPrompt = selectedTemplatePrompt.replace(/\[SUBJECT\]/gi, subject);
+                }
+                
+                if (currentView !== 'canvas') await switchView('canvas');
+
+                setLoadingState(true);
+                outputGrid.innerHTML = '';
+                generatedImages = [];
+                downloadBtn.classList.add('hidden');
+                
+                const optimizationMode = document.getElementById('select-optimizer').value;
+                const imageCount = parseInt(document.getElementById('image-count').value, 10) || 1;
+                const tasks = [];
+                let cardIndex = 0;
+
+                for (let i = 0; i < imageCount; i++) {
+                    const card = createPlaceholderCard(originalPrompt, cardIndex);
+                    outputGrid.appendChild(card);
+                    const effectiveOptMode = optimizationMode === 'off' ? 'off' : 'image';
+                    tasks.push(processSinglePrompt(originalPrompt, effectiveOptMode, card));
+                    cardIndex++;
+                }
+                await Promise.allSettled(tasks);
+                setLoadingState(false);
+                showMessage(`Selesai menghasilkan ${cardIndex} gambar.`, 'success');
+            }
+
+            async function processSinglePrompt(originalPrompt, optimizationMode, card) {
+                let finalPrompt = originalPrompt;
+                try {
+                    if (optimizationMode === 'image') {
+                        card.querySelector('.card-prompt').textContent = 'Mengoptimalkan prompt...';
+                        finalPrompt = await optimizePrompt(originalPrompt);
+                    }
+                    card.querySelector('.card-prompt').textContent = finalPrompt;
+                    card.dataset.prompt = finalPrompt; 
+                    const aspectRatio = document.getElementById('select-aspect-ratio').value;
+                    
+                    // (MODIFIKASI) Gunakan style refs dari state global, bukan dari mode
+                    // (MODIFIKASI) Gunakan subject refs dari state global di mode 'single'/'template'
+                    let activeSubjectRefs = (currentMode === 'single' || currentMode === 'template') ? subjectReferenceBase64s : [];
+                    
+                    const base64Image = await generateImage(
+                        finalPrompt, 
+                        aspectRatio,
+                        activeSubjectRefs,
+                        styleReferenceBase64s // Selalu gunakan ref gaya jika ada
+                    );
+
+                    if (base64Image) {
+                        await updateCard(card, base64Image, finalPrompt);
+                    } else {
+                        throw new Error("API tidak mengembalikan gambar.");
+                    }
+                } catch (error) {
+                    console.error("Gagal memproses prompt:", error);
+                    updateCard(card, null, finalPrompt, `Error: ${error.message || 'Generasi gagal'}`);
+                }
+            }
+
+            /**
+             * (DIMODIFIKASI) Memperbarui kartu UI, sekarang dengan auto-download.
+             */
+            async function updateCard(card, base64, finalPrompt, errorMsg = null) {
+                const spinner = card.querySelector('.spinner');
+                const img = card.querySelector('img');
+                const promptEl = card.querySelector('.card-prompt');
+                const downloadBtnCard = card.querySelector('.download-single-btn');
+                const regenerateBtnCard = card.querySelector('.regenerate-btn');
+                const copyBtnCard = card.querySelector('.copy-prompt-btn');
+                
+                spinner.classList.add('hidden');
+                
+                if (errorMsg) {
+                    promptEl.innerHTML = `<span class="text-red-500 font-medium">${errorMsg}</span><br>${finalPrompt}`;
+                    img.src = "https://placehold.co/512x512/f87171/ffffff?text=Error";
+                    img.classList.remove('hidden');
+                } else {
+                    img.src = base64;
+                    img.classList.remove('hidden');
+                    promptEl.textContent = finalPrompt;
+                    
+                    const index = parseInt(card.dataset.index, 10);
+                    const imageData = {
+                        id: `img_${new Date().getTime()}_${index}`,
+                        index: index,
+                        base64: base64,
+                        prompt: finalPrompt,
+                        timestamp: new Date().getTime()
+                    };
+                    
+                    generatedImages.push(imageData);
+                    card.dataset.base64 = base64;
+                    
+                    await saveImageToHistory(imageData);
+                    downloadBtnCard.disabled = false;
+
+                    // (BARU) Logika Unduh Otomatis untuk Mode List
+                    if (currentMode === 'list' && listAutoDownload.checked) {
+                        downloadBase64File(base64, `batch_image_${imageData.id}.png`);
+                    }
+                }
+                regenerateBtnCard.disabled = false;
+                copyBtnCard.disabled = false;
+                if (generatedImages.some(img => img.base64)) downloadBtn.classList.remove('hidden');
+            }
+
+            async function handleRegenerate(card) {
+                if (isGenerating) return;
+                const originalPrompt = card.dataset.prompt;
+                const index = parseInt(card.dataset.index, 10);
+                const optimizationMode = document.getElementById('select-optimizer').value;
+                card.querySelector('.spinner').classList.remove('hidden');
+                card.querySelector('img').classList.add('hidden');
+                card.querySelector('img').src = '';
+                card.querySelector('.regenerate-btn').disabled = true;
+                card.querySelector('.copy-prompt-btn').disabled = true;
+                card.querySelector('.download-single-btn').disabled = true;
+                generatedImages = generatedImages.filter(img => img.index !== index);
+                const effectiveOptMode = optimizationMode === 'off' ? 'off' : 'image';
+                await processSinglePrompt(originalPrompt, effectiveOptMode, card);
+            }
+
+            async function handleDownloadZip() {
+                const validImages = generatedImages.filter(img => img.base64);
+                if (validImages.length === 0) {
+                    showMessage("Tidak ada gambar untuk diunduh.", 'error');
+                    return;
+                }
+                showMessage(`Mempersiapkan ${validImages.length} gambar...`, 'info');
+                downloadBtn.disabled = true;
+                downloadBtn.textContent = 'Menyiapkan ZIP...';
+                try {
+                    const zip = new JSZip();
+                    for (const image of validImages) {
+                        const base64Data = image.base64.split(',')[1];
+                        zip.file(`image_${image.index + 1}.png`, base64Data, { base64: true });
+                        zip.file(`image_${image.index + 1}_prompt.txt`, image.prompt);
+                    }
+                    const blob = await zip.generateAsync({ type: "blob" });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'gemini_canvas_export.zip';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                    showMessage('Unduhan ZIP berhasil!', 'success');
+                } catch (error) {
+                    console.error("Gagal membuat ZIP:", error);
+                    showMessage('Gagal membuat file ZIP.', 'error');
+                } finally {
+                    downloadBtn.disabled = false;
+                    downloadBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+                        Download All (ZIP)
+                    `;
+                }
+            }
+
+            function setLoadingState(loading) {
+                isGenerating = loading;
+                generateBtn.disabled = loading;
+                if (loading) {
+                    generateBtnText.textContent = 'Generating...';
+                    generateIcon.classList.add('animate-spin');
+                } else {
+                    generateBtnText.textContent = 'Generate';
+                    generateIcon.classList.remove('animate-spin');
+                }
+            }
+            
+            // === (BARU) FUNGSI MODE LIST ===
+            
+            async function startBatchGeneration() {
+                if (fetchedTemplates.length === 0) {
+                    showMessage("Daftar prompt kosong. Sinkronkan terlebih dahulu.", 'error');
+                    return;
+                }
+
+                if (currentView !== 'canvas') {
+                    await switchView('canvas');
+                }
+
+                isBatchRunning = true;
+                currentBatchIndex = 0;
+                setLoadingState(true);
+                generateBtnText.textContent = 'Hentikan Batch';
+                generateBtn.classList.remove('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
+                generateBtn.classList.add('from-red-500', 'to-red-600', 'hover:from-red-600', 'hover:to-red-700');
+                
+                outputGrid.innerHTML = ''; // Bersihkan grid untuk batch baru
+                generatedImages = [];
+                
+                await runBatchTask(); // Mulai tugas pertama
+            }
+            
+            function stopBatchGeneration() {
+                isBatchRunning = false;
+                if (batchTimeoutId) {
+                    clearTimeout(batchTimeoutId);
+                    batchTimeoutId = null;
+                }
+                setLoadingState(false);
+                generateBtnText.textContent = 'Mulai Batch';
+                generateBtn.classList.add('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
+                generateBtn.classList.remove('from-red-500', 'to-red-600', 'hover:from-red-600', 'hover:to-red-700');
+                showMessage("Batch dihentikan oleh pengguna.", 'info');
+                listCurrentPrompt.textContent = 'Dihentikan';
+            }
+            
+            async function runBatchTask() {
+                if (!isBatchRunning) return; // Berhenti jika flag di-set false
+
+                if (currentBatchIndex >= fetchedTemplates.length) {
+                    showMessage("Batch selesai!", 'success');
+                    stopBatchGeneration();
+                    listCurrentPrompt.textContent = 'Selesai';
+                    return;
+                }
+
+                const template = fetchedTemplates[currentBatchIndex];
+                const originalPrompt = template.prompt.replace(/\[SUBJECT\]/gi, ''); // Hapus [SUBJECT] jika ada
+                
+                listCurrentPrompt.textContent = `${currentBatchIndex + 1}/${fetchedTemplates.length}: ${template.name}`;
+                showMessage(`Batch berjalan: Memproses "${template.name}"...`, 'info');
+
+                const imageCount = parseInt(document.getElementById('image-count').value, 10) || 1;
+                const tasks = [];
+                let cardIndex = outputGrid.children.length;
+
+                for (let i = 0; i < imageCount; i++) {
+                    const card = createPlaceholderCard(originalPrompt, cardIndex);
+                    // Tambahkan ke bagian atas grid
+                    if (outputGrid.firstChild) {
+                        outputGrid.insertBefore(card, outputGrid.firstChild);
+                    } else {
+                        outputGrid.appendChild(card);
+                    }
+                    // Mode 'list' selalu 'off' untuk optimasi, karena prompt sudah jadi
+                    tasks.push(processSinglePrompt(originalPrompt, 'off', card));
+                    cardIndex++;
+                }
+
+                await Promise.allSettled(tasks);
+
+                // Pindah ke prompt berikutnya
+                currentBatchIndex++;
+                
+                // Jadwalkan tugas berikutnya setelah interval
+                const interval = (parseInt(listIntervalTime.value, 10) || 5) * 1000;
+                batchTimeoutId = setTimeout(runBatchTask, interval);
+            }
+
+            // === INISIALISASI EVENT LISTENERS ===
+            modeRadios.forEach(radio => radio.addEventListener('change', handleModeChange));
+            
+            uploadSubject.addEventListener('change', (e) => handleImageUpload(e, subjectReferenceBase64s, subjectPreviewContainer, clearSubjectBtn));
+            clearSubjectBtn.addEventListener('click', () => clearImageReferences(subjectReferenceBase64s, uploadSubject, subjectPreviewContainer, clearSubjectBtn));
+            
+            uploadStyle.addEventListener('change', (e) => handleImageUpload(e, styleReferenceBase64s, stylePreviewContainer, clearStyleBtn));
+            clearStyleBtn.addEventListener('click', () => clearImageReferences(styleReferenceBase64s, uploadStyle, stylePreviewContainer, clearStyleBtn));
+            
+            canvasViewTitle.addEventListener('click', async () => await switchView('canvas'));
+            historyViewTitle.addEventListener('click', async () => await switchView('history'));
+            
+            closeModalBtn.addEventListener('click', closePreview);
+            downloadPreviewBtn.addEventListener('click', () => {
+                const imageUrl = previewModal.dataset.currentImageUrl;
+                if (imageUrl) {
+                    const timestamp = new Date().getTime();
+                    downloadBase64File(imageUrl, `preview_image_${timestamp}.png`);
+                    showMessage('Gambar preview berhasil diunduh.', 'success');
+                } else {
+                    showMessage('Gambar tidak tersedia untuk diunduh.', 'error');
+                }
+            });
+            previewModal.addEventListener('click', (e) => { if (e.target === previewModal) closePreview(); });
+
+            // (MODIFIKASI) Ganti nama fungsi
+            syncTemplatesBtn.addEventListener('click', fetchAndRenderTemplates);
+            syncListBtn.addEventListener('click', fetchAndRenderTemplates); // (BARU) Tombol sync di mode list
+
+            (async () => {
+                await fetchAndRenderTemplates(); // Panggil saat memuat
+            })();
+
+            generateBtn.addEventListener('click', handleGenerateClick);
+            downloadBtn.addEventListener('click', handleDownloadZip);
+            
+            getDB().then(() => {
+                console.log("Database riwayat berhasil diinisialisasi.");
+                handleModeChange({ target: { value: 'single' } }); // Init mode 'single'
+                switchView('canvas');
+            }).catch(err => {
+                console.error("Gagal inisialisasi database:", err);
+                showMessage("Gagal memuat database riwayat.", "error");
+                handleModeChange({ target: { value: 'single' } });
+                switchView('canvas');
+            });
+        });
+    </script>
+</body>
+</html>
