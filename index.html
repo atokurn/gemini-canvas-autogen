@@ -1,0 +1,1071 @@
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Generative Canvas</title>
+    <!-- Memuat Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat JSZip untuk fungsionalitas unduh .zip -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Konfigurasi Font dan Gaya Kustom -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Gaya untuk radio button mode agar terlihat seperti tab */
+        .mode-radio:checked + label {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: white;
+            border-color: #3b82f6; /* border-blue-500 */
+        }
+        .mode-radio {
+            display: none; /* Sembunyikan radio button asli */
+        }
+        /* Kustomisasi scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; /* bg-slate-100 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8; /* bg-slate-400 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* bg-slate-500 */
+        }
+        /* Animasi spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6; /* blue-500 */
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+    <div class="flex flex-col lg:flex-row min-h-screen lg:h-screen lg:overflow-hidden">
+        
+        <!-- === PANEL KONTROL (SISI KIRI) === -->
+        <aside class="w-full lg:w-1/3 xl:w-1/4 p-4 lg:p-6 bg-white lg:h-screen lg:overflow-y-auto shadow-lg">
+            <header class="mb-6 pb-4 border-b border-slate-200">
+                <h1 class="text-2xl font-bold text-blue-600">🎨 Gemini Canvas</h1>
+                
+            </header>
+
+            <!-- 1. Pemilih Mode -->
+            <section class="mb-6">
+                <h2 class="text-lg font-semibold mb-3">Pilih Mode</h2>
+                <div class="flex rounded-md border border-slate-300">
+                    <input type="radio" id="mode-single" name="mode" value="single" class="mode-radio" checked>
+                    <label for="mode-single" class="flex-1 text-center py-2 px-3 cursor-pointer rounded-l-md transition-colors duration-200 hover:bg-slate-50">Single</label>
+                    
+                    <input type="radio" id="mode-template" name="mode" value="template" class="mode-radio">
+                    <label for="mode-template" class="flex-1 text-center py-2 px-3 cursor-pointer rounded-r-md transition-colors duration-200 hover:bg-slate-50">Template</label>
+                </div>
+            </section>
+
+            <!-- 2. Panel Input (Kondisional) -->
+            <section class="mb-6">
+                <!-- 2a. Single Prompt Mode -->
+                <div id="panel-single">
+                    <label for="prompt-single" class="text-lg font-semibold mb-3 block">Prompt Tunggal</label>
+                    <textarea id="prompt-single" rows="4" class="w-full p-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cth: Kucing cyberpunk di Tokyo neon, tambahkan detail visual di sini..."></textarea>
+                </div>
+
+                <!-- 2b. Template Mode -->
+                <div id="panel-template" class="hidden">
+                    <label class="text-lg font-semibold mb-3 block">Pilih Template Gaya</label>
+                    <p class="text-sm text-slate-600 mb-4">Pilih template di bawah ini untuk mengisi prompt Anda secara otomatis. **Ganti [SUBJECT] dengan subjek Anda!**</p>
+                    <div id="template-buttons" class="grid grid-cols-2 gap-3">
+                        <!-- Tombol template akan dibuat oleh JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Opsi Tambahan -->
+            <section class="mb-6 space-y-4">
+                <h2 class="text-lg font-semibold mb-3">Opsi</h2>
+                <!-- 3a. Prompt Optimizer -->
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200">
+                    <label for="select-optimizer" class="font-medium text-slate-700">Optimize Prompt</label>
+                    <select id="select-optimizer" class="w-auto p-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="off">Tidak (Gunakan Asli)</option>
+                        <option value="image">Ya (Per Gambar)</option>
+                    </select>
+                </div>
+                
+                <!-- Jumlah Gambar per Prompt -->
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200">
+                    <label for="image-count" class="font-medium text-slate-700">Jml. Gambar / Prompt</label>
+                    <input type="number" id="image-count" value="1" min="1" max="10" class="w-20 p-2 border border-slate-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Rasio Aspek (BARU) -->
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200">
+                    <label for="select-aspect-ratio" class="font-medium text-slate-700">Rasio Aspek</label>
+                    <select id="select-aspect-ratio" class="w-auto p-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="1:1">1:1 (Square)</option>
+                        <option value="16:9">16:9 (Landscape)</option>
+                        <option value="9:16">9:16 (Portrait)</option>
+                        <option value="4:3">4:3 (Landscape)</option>
+                        <option value="3:4">3:4 (Portrait)</option>
+                    </select>
+                </div>
+
+                <!-- 3b. Referensi Subjek (Telah dimodifikasi untuk 'multiple') -->
+                <div class="p-3 bg-slate-50 rounded-md border border-slate-200">
+                    <label for="upload-subject" class="font-medium text-slate-700 mb-2 block">Referensi Subjek (Contoh Produk)</label>
+                    <input type="file" id="upload-subject" accept="image/*" multiple class="block w-full text-sm text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100 cursor-pointer">
+                    <!-- Pratinjau untuk multi-gambar -->
+                    <div id="subject-preview-container" class="hidden mt-3 flex flex-wrap gap-2 justify-center">
+                        <!-- Gambar pratinjau akan ditambahkan oleh JS di sini -->
+                    </div>
+                    <button id="clear-subject" class="hidden text-xs text-red-500 hover:text-red-700 mt-2 w-full text-center">Hapus Semua Subjek</button>
+                    <p class="text-xs text-slate-500 mt-2">Gunakan ini untuk mempertahankan bentuk atau objek utama. Bisa unggah lebih dari satu.</p>
+                </div>
+
+                <!-- 3c. Style Reference (Telah dimodifikasi untuk 'multiple') -->
+                <div class="p-3 bg-slate-50 rounded-md border border-slate-200">
+                    <label for="upload-style" class="font-medium text-slate-700 mb-2 block">Referensi Gaya (Opsional)</label>
+                    <input type="file" id="upload-style" accept="image/*" multiple class="block w-full text-sm text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100 cursor-pointer">
+                    <!-- Pratinjau untuk multi-gambar -->
+                    <div id="style-preview-container" class="hidden mt-3 flex flex-wrap gap-2 justify-center">
+                        <!-- Gambar pratinjau akan ditambahkan oleh JS di sini -->
+                    </div>
+                    <button id="clear-style" class="hidden text-xs text-red-500 hover:text-red-700 mt-2 w-full text-center">Hapus Semua Gaya</button>
+                    <p class="text-xs text-slate-500 mt-2">Gunakan ini untuk menerapkan tone, warna, atau tekstur. Bisa unggah lebih dari satu.</p>
+                </div>
+            </section>
+
+            <!-- 4. Tombol Aksi Utama -->
+            <section>
+                <button id="generate-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 shadow-md flex items-center justify-center gap-2">
+                    <svg id="generate-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9 1.9 5.8 1.9-5.8 5.8-1.9-5.8-1.9z"/><path d="m22 12-1.9 5.8-5.8 1.9 5.8 1.9 1.9 5.8 1.9-5.8 5.8-1.9-5.8-1.9z"/><path d="m2 10 1.9 5.8 5.8 1.9-5.8 1.9-1.9 5.8-1.9-5.8-5.8-1.9 5.8-1.9z"/></svg>
+                    <span id="generate-btn-text">Generate</span>
+                </button>
+
+                <!-- Error/Info Message Box -->
+                <div id="message-box" class="hidden p-3 rounded-md mt-4 text-sm"></div>
+            </section>
+        </aside>
+
+        <!-- === CANVAS OUTPUT (SISI KANAN) === -->
+        <main class="w-full lg:w-2/3 xl:w-3/4 p-4 lg:p-8 min-h-screen lg:h-screen lg:overflow-y-auto bg-slate-100">
+            <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                <div class="flex items-center space-x-4">
+                    <!-- View Selector -->
+                    <h2 id="canvas-view-title" class="text-2xl font-bold text-slate-800 cursor-pointer border-b-2 border-slate-800 pb-1">Canvas Output</h2>
+                    <h2 id="history-view-title" class="text-2xl font-normal text-slate-400 hover:text-slate-600 cursor-pointer pb-1">History</h2>
+                </div>
+                <button id="download-btn" class="hidden mt-3 sm:mt-0 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-5 rounded-lg transition-colors duration-200 shadow flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download All (ZIP)
+                </button>
+            </header>
+
+            <!-- Grid untuk hasil gambar -->
+            <div id="output-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                <!-- Area ini akan diisi oleh JavaScript saat gambar dibuat -->
+            </div>
+            
+            <!-- Container untuk Riwayat Gambar (BARU) -->
+            <div id="history-container" class="hidden grid grid-cols-1 gap-4">
+                <!-- Area ini akan diisi oleh JavaScript untuk riwayat -->
+            </div>
+        </main>
+    </div>
+
+    <!-- === MODAL PREVIEW (BARU) === -->
+    <div id="preview-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="relative bg-white p-2 rounded-lg shadow-2xl max-w-4xl max-h-[90vh]">
+            <!-- Tombol Tutup Modal -->
+            <button id="close-modal-btn" class="absolute -top-3 -right-3 bg-white rounded-full p-1.5 shadow-lg text-slate-800 hover:bg-red-500 hover:text-white transition-colors z-10">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <!-- Gambar Pratinjau -->
+            <img id="modal-image" src="" alt="Pratinjau Gambar" class="w-full h-auto object-contain max-h-[85vh] rounded">
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // === KONSTANTA API ===
+            // (Kosongkan apiKey jika menggunakan proxy atau lingkungan yang menyediakannya secara otomatis)
+            const API_KEY = ""; 
+            const API_URL_TEXT_GEN = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
+            // Imagen 3.0 untuk Text-to-Image murni
+            const API_URL_IMAGE_GEN = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
+            // Nano-Banana (Flash-Image-Preview) untuk Multimodal (Image + Text)
+            const API_URL_IMAGE_EDIT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${API_KEY}`; 
+
+            // === DATA TEMPLATE BARU ===
+            const TEMPLATES = [
+                { name: "Fotografi Produk Studio", prompt: "A close-up photorealistic product shot of [SUBJECT] on a clean background, professional studio lighting, 8k, detailed, commercial photography", description: "Gaya fotografi produk yang tajam dan bersih." },
+                { name: "Digital Painting Epik", prompt: "A breathtaking digital painting of [SUBJECT], epic fantasy style, dramatic volumetric lighting, cinematic, high contrast, by Greg Rutkowski and Zdzisław Beksiński", description: "Gaya lukisan digital fantasi yang dramatis dan gelap." },
+                { name: "Pixel Art Retro", prompt: "8-bit pixel art of [SUBJECT], low-resolution aesthetic, isometric view, perfect for a retro video game.", description: "Visual bergaya seni pixel 8-bit untuk game retro." },
+                { name: "Glow Neon Cyberpunk", prompt: "A vibrant scene of [SUBJECT] in a futuristic cyberpunk city at night, heavy rain, neon glow, detailed reflection, volumetric light.", description: "Pencahayaan neon dan suasana hujan di kota futuristik." },
+                { name: "Sketsa Pensil Realistis", prompt: "A highly detailed pencil sketch of [SUBJECT], fine lines, graphite shading, artistic rendering on parchment paper.", description: "Gambar sketsa pensil hitam putih yang realistis." },
+            ];
+
+            // === REFERENSI DOM ===
+            const modeRadios = document.querySelectorAll('input[name="mode"]');
+            const panels = {
+                single: document.getElementById('panel-single'),
+                template: document.getElementById('panel-template'),
+            };
+            const inputs = {
+                single: document.getElementById('prompt-single'),
+            };
+            const templateButtonsContainer = document.getElementById('template-buttons');
+            
+            // DOM Referensi untuk Referensi Subjek (Multi)
+            const uploadSubject = document.getElementById('upload-subject');
+            const subjectPreviewContainer = document.getElementById('subject-preview-container');
+            const clearSubjectBtn = document.getElementById('clear-subject');
+
+            // DOM Referensi untuk Referensi Gaya (Multi)
+            const uploadStyle = document.getElementById('upload-style');
+            const stylePreviewContainer = document.getElementById('style-preview-container');
+            const clearStyleBtn = document.getElementById('clear-style');
+
+            const generateBtn = document.getElementById('generate-btn');
+            const generateBtnText = document.getElementById('generate-btn-text');
+            const generateIcon = document.getElementById('generate-icon');
+            const downloadBtn = document.getElementById('download-btn');
+            const outputGrid = document.getElementById('output-grid');
+            const messageBox = document.getElementById('message-box');
+
+            // === REFERENSI DOM BARU UNTUK HISTORY ===
+            const canvasViewTitle = document.getElementById('canvas-view-title');
+            const historyViewTitle = document.getElementById('history-view-title');
+            const historyContainer = document.getElementById('history-container');
+            
+            // === REFERENSI DOM BARU UNTUK PREVIEW MODAL ===
+            const previewModal = document.getElementById('preview-modal');
+            const modalImage = document.getElementById('modal-image');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+
+            const HISTORY_KEY = 'gemini_image_history';
+            let currentView = 'canvas'; // 'canvas' atau 'history'
+
+            // === STATE APLIKASI ===
+            let currentMode = 'single';
+            let styleReferenceBase64s = []; // Array untuk multi-gaya
+            let subjectReferenceBase64s = []; // Array untuk multi-subjek
+            let generatedImages = [];
+            let isGenerating = false;
+
+            // === LOGIKA HISTORY ===
+
+            /**
+             * Memuat riwayat dari localStorage.
+             * Riwayat disimpan sebagai Array of { id, timestamp, prompt, base64 }
+             */
+            function loadHistory() {
+                try {
+                    const json = localStorage.getItem(HISTORY_KEY);
+                    // Generate a random ID if crypto.randomUUID is not available (fallback)
+                    const fallbackId = () => Math.random().toString(36).substring(2, 10);
+                    
+                    const history = json ? JSON.parse(json) : [];
+                    // Ensure all history items have an 'id' for better tracking/downloading
+                    return history.map(item => ({
+                        ...item,
+                        id: item.id || fallbackId()
+                    }));
+
+                } catch (e) {
+                    console.error("Gagal memuat riwayat dari localStorage", e);
+                    return [];
+                }
+            }
+
+            /**
+             * Menyimpan riwayat gambar baru ke localStorage.
+             */
+            function saveImageToHistory(item) {
+                const history = loadHistory();
+                // Batasi riwayat agar tidak terlalu besar (misalnya, 50 item)
+                history.unshift(item); 
+                if (history.length > 50) history.pop();
+
+                try {
+                    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+                } catch (e) {
+                    console.error("Gagal menyimpan riwayat ke localStorage", e);
+                }
+            }
+            
+            /**
+             * Merender daftar riwayat.
+             */
+            function renderHistory() {
+                historyContainer.innerHTML = '';
+                const history = loadHistory();
+
+                if (history.length === 0) {
+                    historyContainer.innerHTML = `<p class="text-center text-slate-500 py-10">Tidak ada riwayat. Hasilkan gambar untuk memulai!</p>`;
+                    return;
+                }
+
+                history.forEach(item => {
+                    const date = new Date(item.timestamp).toLocaleString('id-ID', {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+                    
+                    const historyCard = document.createElement('div');
+                    historyCard.className = 'flex flex-col sm:flex-row bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow border border-slate-200';
+                    historyCard.innerHTML = `
+                        <img src="${item.base64}" alt="History Image" class="history-preview-img w-full sm:w-24 h-auto sm:h-24 object-cover rounded-md mb-3 sm:mb-0 sm:mr-4 border border-slate-300 cursor-pointer">
+                        <div class="flex-1">
+                            <p class="text-xs text-slate-500 mb-1">${date} - ID: ${item.id.substring(0, 8)}</p>
+                            <p class="font-medium text-slate-800 line-clamp-3" title="${item.prompt}">${item.prompt}</p>
+                        </div>
+                        <div class="flex sm:flex-col justify-end gap-2 mt-3 sm:mt-0 sm:ml-4">
+                            <!-- Tombol Unduh (Icon) -->
+                            <div class="relative group">
+                                <button data-base64="${item.base64}" data-index="${item.id.substring(0, 8)}" class="history-download-btn p-2 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </button>
+                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Unduh</span>
+                            </div>
+                        </div>
+                    `;
+                    historyContainer.appendChild(historyCard);
+
+                    // (BARU) Listener untuk Pratinjau Riwayat
+                    historyCard.querySelector('.history-preview-img').addEventListener('click', (e) => {
+                        openPreview(e.target.src);
+                    });
+                });
+                
+                // Add click listener for history download buttons
+                historyContainer.querySelectorAll('.history-download-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const base64 = e.currentTarget.dataset.base64;
+                        const id = e.currentTarget.dataset.index;
+                        downloadBase64File(base64, `history_image_${id}.png`);
+                        showMessage(`Gambar riwayat ${id} diunduh.`, 'success');
+                    });
+                });
+            }
+
+            /**
+             * Menangani pergantian tampilan antara Canvas dan History.
+             */
+            function switchView(view) {
+                currentView = view;
+                if (view === 'canvas') {
+                    outputGrid.classList.remove('hidden');
+                    historyContainer.classList.add('hidden');
+                    canvasViewTitle.classList.add('border-b-2', 'border-slate-800', 'font-bold');
+                    canvasViewTitle.classList.remove('text-slate-400', 'hover:text-slate-600', 'font-normal');
+                    historyViewTitle.classList.remove('border-b-2', 'border-slate-800', 'font-bold');
+                    historyViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-normal');
+                    
+                    // Tampilkan tombol ZIP hanya jika ada gambar di state 'generatedImages'
+                    if (generatedImages.some(img => img.base64)) {
+                        downloadBtn.classList.remove('hidden');
+                    } else {
+                        downloadBtn.classList.add('hidden');
+                    }
+
+                } else { // history
+                    outputGrid.classList.add('hidden');
+                    historyContainer.classList.remove('hidden');
+                    historyViewTitle.classList.add('border-b-2', 'border-slate-800', 'font-bold');
+                    historyViewTitle.classList.remove('text-slate-400', 'hover:text-slate-600', 'font-normal');
+                    canvasViewTitle.classList.remove('border-b-2', 'border-slate-800', 'font-bold');
+                    canvasViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-normal');
+                    downloadBtn.classList.add('hidden'); // Sembunyikan tombol ZIP di tampilan History
+                    
+                    renderHistory();
+                }
+            }
+
+            // === FUNGSI UTILITAS BARU UNTUK MODAL ===
+            /**
+             * Membuka modal pratinjau.
+             */
+            function openPreview(imageUrl) {
+                if (imageUrl) {
+                    modalImage.src = imageUrl;
+                    previewModal.classList.remove('hidden');
+                }
+            }
+
+            /**
+             * Menutup modal pratinjau.
+             */
+            function closePreview() {
+                previewModal.classList.add('hidden');
+                modalImage.src = ''; // Kosongkan src
+            }
+
+            // === FUNGSI UTILITAS ===
+            
+            /**
+             * Helper function to trigger a Base64 file download.
+             */
+            function downloadBase64File(base64Data, filename) {
+                const link = document.createElement('a');
+                link.href = base64Data;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            /**
+             * Fungsi fetch dengan retry dan exponential backoff.
+             */
+            async function fetchWithRetry(url, options, maxRetries = 3) {
+                let attempt = 0;
+                while (attempt < maxRetries) {
+                    try {
+                        const response = await fetch(url, options);
+                        if (!response.ok) {
+                            if (response.status === 429 || response.status >= 500) {
+                                throw new Error(`HTTP error ${response.status}`);
+                            } else {
+                                const errorData = await response.json();
+                                console.error("Client error:", errorData);
+                                showMessage(`Error: ${errorData.error.message}`, 'error');
+                                return null;
+                            }
+                        }
+                        return await response.json();
+                    } catch (error) {
+                        attempt++;
+                        if (attempt >= maxRetries) {
+                            console.error("Max retries reached. Error:", error);
+                            showMessage(`Gagal terhubung ke API setelah ${maxRetries} percobaan.`, 'error');
+                            return null;
+                        }
+                        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+
+            /**
+             * Memanggil Gemini untuk mengoptimalkan prompt.
+             */
+            async function optimizePrompt(userPrompt) {
+                const systemPrompt = `You are a creative prompt optimizer for an AI image generator. 
+                Your task is to take a user's prompt and rewrite it to be more descriptive, vivid, and evocative. 
+                Do NOT change the core subject or meaning. 
+                Add details about lighting (e.g., 'cinematic lighting', 'soft morning light'), style (e.g., 'digital art', 'photorealistic', 'anime style'), and composition (e.g., 'dynamic angle', 'wide shot', 'close-up').
+                Respond ONLY with the new, optimized prompt.`;
+
+                const payload = {
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                };
+
+                const result = await fetchWithRetry(API_URL_TEXT_GEN, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (result && result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    return result.candidates[0].content.parts[0].text.trim();
+                } else {
+                    console.warn("Optimasi prompt gagal, menggunakan prompt asli.");
+                    return userPrompt; // Fallback ke prompt asli
+                }
+            }
+
+            /**
+             * Menghasilkan gambar menggunakan Imagen atau Nano-Banana (tergantung referensi gambar).
+             */
+            async function generateImage(prompt, styleBase64s, subjectBase64s) {
+                let apiUrl, payload;
+                const hasImageInput = styleBase64s.length > 0 || subjectBase64s.length > 0;
+                
+                // Ambil rasio aspek dari DOM
+                const aspectRatio = document.getElementById('select-aspect-ratio').value;
+
+                if (hasImageInput) {
+                    // --- Gunakan Nano-Banana (gemini-2.5-flash-image-preview) untuk Multimodal ---
+                    apiUrl = API_URL_IMAGE_EDIT;
+                    
+                    let promptParts = [];
+                    let instructionText = "Buat gambar baru berdasarkan instruksi ini. ";
+
+                    // 1. Tambahkan Subjek (Multi)
+                    subjectBase64s.forEach((base64String, index) => {
+                        const base64Data = base64String.split(',')[1];
+                        const mimeType = base64String.match(/data:(image\/.+?);/)[1];
+                        promptParts.push({ inlineData: { mimeType: mimeType, data: base64Data } });
+                        instructionText += `Pertahankan subjek utama dari gambar subjek ${index + 1}. `;
+                    });
+
+                    // 2. Tambahkan Gaya (Multi)
+                    styleBase64s.forEach((base64String, index) => {
+                        const base64Data = base64String.split(',')[1];
+                        const mimeType = base64String.match(/data:(image\/.+?);/)[1];
+                        promptParts.push({ inlineData: { mimeType: mimeType, data: base64Data } });
+                        instructionText += `Terapkan gaya visual (tone, tekstur, pencahayaan) dari gambar gaya ${index + 1}. `;
+                    });
+
+                    // 3. Tambahkan Prompt Teks
+                    instructionText += `Gunakan prompt teks ini untuk detail lebih lanjut: "${prompt}".`;
+                    // Tambahkan hint rasio aspek (MODIFIKASI)
+                    instructionText += ` Harap buat gambar ini dengan rasio aspek ${aspectRatio}.`;
+                    
+                    // Instruction must be the first part, images follow
+                    promptParts.unshift({ text: instructionText }); 
+
+                    payload = {
+                        contents: [{
+                            role: "user",
+                            parts: promptParts
+                        }],
+                        generationConfig: {
+                            responseModalities: ['IMAGE']
+                        }
+                    };
+                    
+                    const result = await fetchWithRetry(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+
+                    const base64ImageData = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                    if (base64ImageData) {
+                        return `data:image/png;base64,${base64ImageData}`;
+                    }
+
+                } else {
+                    // --- Gunakan Imagen (imagen-3.0-generate-002) untuk Text-to-Image (Default) ---
+                    apiUrl = API_URL_IMAGE_GEN;
+                    payload = {
+                        instances: [{ prompt: prompt }],
+                        parameters: { 
+                            sampleCount: 1,
+                            aspectRatio: aspectRatio // Tambahkan rasio aspek di sini (MODIFIKASI)
+                        }
+                    };
+
+                    const result = await fetchWithRetry(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+
+                    if (result && result.predictions?.[0]?.bytesBase64Encoded) {
+                        return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    }
+                }
+
+                console.error("Generasi gambar gagal.", { apiUrl, payload });
+                showMessage('Gagal menghasilkan gambar.', 'error');
+                return null;
+            }
+
+            // === FUNGSI UTAMA APLIKASI ===
+
+            /**
+             * Menangani perubahan mode input.
+             */
+            function handleModeChange(e) {
+                currentMode = e.target.value;
+                Object.values(panels).forEach(panel => panel.classList.add('hidden'));
+                panels[currentMode].classList.remove('hidden');
+
+                // Di mode template, kita hanya perlu tombol Generate untuk mengaktifkan kembali Single
+                if (currentMode === 'template') {
+                    generateBtn.disabled = true;
+                    generateBtnText.textContent = 'Pilih Template Dulu';
+                } else {
+                    generateBtn.disabled = false;
+                    generateBtnText.textContent = 'Generate';
+                }
+            }
+
+            /**
+             * Menampilkan pesan di UI.
+             */
+            function showMessage(message, type = 'info') {
+                messageBox.classList.remove('hidden', 'bg-blue-100', 'text-blue-700', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+                if (type === 'error') {
+                    messageBox.classList.add('bg-red-100', 'text-red-700');
+                } else if (type === 'success') {
+                    messageBox.classList.add('bg-green-100', 'text-green-700');
+                } else {
+                    messageBox.classList.add('bg-blue-100', 'text-blue-700');
+                }
+                messageBox.textContent = message;
+                setTimeout(() => messageBox.classList.add('hidden'), 5000);
+            }
+
+            /**
+             * Fungsi generik untuk menangani unggahan multi-gambar.
+             */
+            function handleImageUpload(e, stateArray, previewContainer, clearButton) {
+                const files = e.target.files;
+                if (!files) return;
+
+                let filesLoaded = 0;
+                previewContainer.innerHTML = ''; // Bersihkan pratinjau lama
+
+                if (files.length === 0) {
+                    previewContainer.classList.add('hidden');
+                    clearButton.classList.add('hidden');
+                    stateArray.length = 0; // Kosongkan array
+                    return;
+                }
+
+                previewContainer.classList.remove('hidden');
+                clearButton.classList.remove('hidden');
+
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64String = event.target.result;
+                        stateArray.push(base64String); // Tambahkan ke array state
+
+                        // Tambahkan pratinjau
+                        const img = document.createElement('img');
+                        img.src = base64String;
+                        img.className = "max-h-20 w-auto inline-block rounded-md border border-slate-300";
+                        previewContainer.appendChild(img);
+                        
+                        filesLoaded++;
+                        if (filesLoaded === files.length) {
+                            showMessage(`${files.length} gambar referensi diunggah.`, 'info');
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            /**
+             * Fungsi generik untuk membersihkan referensi gambar.
+             */
+            function clearImageReferences(stateArray, uploadInput, previewContainer, clearButton) {
+                stateArray.length = 0; // Kosongkan array
+                uploadInput.value = null; // Reset input file
+                previewContainer.classList.add('hidden');
+                previewContainer.innerHTML = ''; // Kosongkan pratinjau
+                clearButton.classList.add('hidden');
+                showMessage('Referensi gambar dihapus.', 'info');
+            }
+            
+            /**
+             * Membuat dan menambahkan tombol template ke UI.
+             */
+            function createTemplateButtons() {
+                templateButtonsContainer.innerHTML = '';
+                TEMPLATES.forEach((template, index) => {
+                    const button = document.createElement('button');
+                    button.className = 'template-btn bg-slate-200 hover:bg-blue-100 text-slate-800 p-3 rounded-lg text-sm font-medium transition-colors text-left border border-slate-300';
+                    button.innerHTML = `<span class="font-bold">${template.name}</span><p class="text-xs text-slate-600 mt-1">${template.description}</p>`;
+                    button.dataset.index = index;
+                    button.addEventListener('click', handleTemplateClick);
+                    templateButtonsContainer.appendChild(button);
+                });
+            }
+
+            /**
+             * Menangani klik tombol template.
+             */
+            function handleTemplateClick(e) {
+                const index = e.currentTarget.dataset.index;
+                const template = TEMPLATES[index];
+
+                // 1. Isi prompt tunggal
+                inputs.single.value = template.prompt;
+
+                // 2. Switch kembali ke mode 'Single'
+                document.getElementById('mode-single').checked = true;
+                handleModeChange({ target: { value: 'single' } });
+
+                showMessage(`Template '${template.name}' diterapkan. Ganti [SUBJECT] dengan subjek Anda!`, 'info');
+            }
+
+
+            /**
+             * Membuat kartu placeholder saat loading.
+             */
+            function createPlaceholderCard(initialPrompt, index) {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-lg shadow-md overflow-hidden";
+                card.dataset.index = index;
+                card.dataset.prompt = initialPrompt; 
+
+                card.innerHTML = `
+                    <div class="aspect-square bg-slate-200 flex items-center justify-center relative">
+                        <div class="spinner"></div>
+                        <img src="" alt="Generated Image" class="hidden w-full h-full object-cover">
+                    </div>
+                    <div class="p-4">
+                        <p class="card-prompt text-sm text-slate-600 mb-3 line-clamp-3" title="${initialPrompt}">${initialPrompt}</p>
+                        <!-- Button wrapper dengan Icon dan Tooltip -->
+                        <div class="flex justify-end gap-2 mt-2">
+                            <!-- Tombol Unduh -->
+                            <div class="relative group">
+                                <button class="download-single-btn p-2 rounded-full bg-green-500 hover:bg-green-600 text-white disabled:bg-gray-400 disabled:text-gray-200 transition-colors" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </button>
+                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Unduh Gambar</span>
+                            </div>
+                            <!-- Tombol Regenerate -->
+                            <div class="relative group">
+                                <button class="regenerate-btn p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:text-gray-400 transition-colors" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M2.5 22v-6h6"/><path d="M21.5 13a9.7 9.7 0 0 0-4.6-7.5l-2.5 2.5"/><path d="M2.5 11a9.7 9.7 0 0 1 4.6 7.5l2.5-2.5"/></svg>
+                                </button>
+                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Regenerate</span>
+                            </div>
+                            <!-- Tombol Copy Prompt -->
+                            <div class="relative group">
+                                <button class="copy-prompt-btn p-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 disabled:text-gray-400 transition-colors" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                </button>
+                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Salin Prompt</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // --- Event Listener untuk Pratinjau (BARU) ---
+                const imgElement = card.querySelector('img');
+                imgElement.addEventListener('click', () => {
+                    // Hanya buka pratinjau jika gambar sudah dimuat (src ada dan tidak tersembunyi)
+                    if (imgElement.src && !imgElement.classList.contains('hidden')) {
+                        openPreview(imgElement.src);
+                    }
+                });
+
+                // --- Event Listener untuk Unduh Individual ---
+                const downloadSingleBtn = card.querySelector('.download-single-btn');
+                downloadSingleBtn.addEventListener('click', () => {
+                    const base64 = card.dataset.base64;
+                    if (base64) {
+                        const index = card.dataset.index;
+                        downloadBase64File(base64, `gemini_image_${parseInt(index) + 1}.png`);
+                        showMessage(`Gambar ${parseInt(index) + 1} diunduh.`, 'success');
+                    }
+                });
+                // ---------------------------------------------------
+
+                card.querySelector('.regenerate-btn').addEventListener('click', () => handleRegenerate(card));
+                
+                const copyBtn = card.querySelector('.copy-prompt-btn');
+                copyBtn.addEventListener('click', () => {
+                    const promptText = card.querySelector('.card-prompt').textContent;
+                    
+                    const tempTextarea = document.createElement('textarea');
+                    tempTextarea.value = promptText;
+                    document.body.appendChild(tempTextarea);
+                    tempTextarea.select();
+                    tempTextarea.setSelectionRange(0, 99999);
+                    
+                    try {
+                        document.execCommand('copy');
+                        
+                        showMessage('Prompt berhasil disalin!', 'success');
+
+                    } catch (err) {
+                        console.error('Gagal menyalin prompt: ', err);
+                        showMessage('Gagal menyalin prompt.', 'error');
+                    }
+                    
+                    document.body.removeChild(tempTextarea);
+                });
+
+                return card;
+            }
+
+            /**
+             * Memperbarui kartu dengan gambar dan info.
+             */
+            async function updateCard(card, finalPrompt, imageBase64) {
+                const spinner = card.querySelector('.spinner');
+                const img = card.querySelector('img');
+                const promptEl = card.querySelector('.card-prompt');
+                const regenBtn = card.querySelector('.regenerate-btn');
+                const copyBtn = card.querySelector('.copy-prompt-btn');
+                const downloadSingleBtn = card.querySelector('.download-single-btn'); // Ambil tombol unduh
+
+                if (imageBase64) {
+                    img.src = imageBase64;
+                    img.classList.remove('hidden');
+                    img.classList.add('cursor-pointer'); // (BARU) Tambahkan kursor
+                    spinner.classList.add('hidden');
+                    regenBtn.disabled = false;
+                    copyBtn.disabled = false;
+                    
+                    downloadSingleBtn.disabled = false; // Aktifkan tombol unduh
+                    // -----------------------------
+                    
+                    // --- Simpan ke Riwayat (BARU) ---
+                    const historyItem = {
+                        // Use crypto.randomUUID for unique ID, fallback if unavailable
+                        id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2, 10),
+                        timestamp: Date.now(),
+                        prompt: finalPrompt,
+                        base64: imageBase64,
+                    };
+                    saveImageToHistory(historyItem);
+                    // ---------------------------------
+
+                } else {
+                    spinner.classList.add('hidden');
+                    card.querySelector('.aspect-square').innerHTML += '<span class="text-red-500 text-xs p-2">Gagal memuat</span>';
+                    img.classList.remove('cursor-pointer'); // (BARU) Hapus kursor jika gagal
+                    regenBtn.disabled = false;
+                    copyBtn.disabled = true;
+                    downloadSingleBtn.disabled = true; // Nonaktifkan tombol unduh jika gagal
+                }
+                
+                promptEl.textContent = finalPrompt;
+                promptEl.title = finalPrompt;
+
+                const index = parseInt(card.dataset.index, 10);
+                const existing = generatedImages.find(item => item.index === index);
+                if (existing) {
+                    existing.prompt = finalPrompt;
+                    existing.base64 = imageBase64;
+                } else {
+                    generatedImages.push({ index, prompt: finalPrompt, base64: imageBase64 });
+                }
+
+                generatedImages.sort((a, b) => a.index - b.index);
+
+                if (generatedImages.some(img => img.base64)) {
+                    downloadBtn.classList.remove('hidden');
+                }
+            }
+
+            /**
+             * Memproses satu prompt (optimize + generate).
+             */
+            async function processSinglePrompt(originalPrompt, optimizationMode, card) {
+                let finalPrompt = originalPrompt;
+                
+                try {
+                    const promptEl = card.querySelector('.card-prompt');
+
+                    if (optimizationMode === 'image') {
+                        promptEl.textContent = "Mengoptimalkan prompt...";
+                        finalPrompt = await optimizePrompt(originalPrompt);
+                        promptEl.textContent = finalPrompt;
+                        promptEl.title = finalPrompt;
+                    }
+
+                    // Panggil generateImage dengan kedua referensi gambar
+                    const imageBase64 = await generateImage(finalPrompt, styleReferenceBase64s, subjectReferenceBase64s);
+                    updateCard(card, finalPrompt, imageBase64);
+                
+                } catch (error) {
+                    console.error(`Gagal memproses prompt: ${originalPrompt}`, error);
+                    updateCard(card, finalPrompt, null);
+                }
+            }
+
+            /**
+             * Menangani klik tombol "Generate" utama.
+             */
+            async function handleGenerateClick() {
+                if (isGenerating || currentMode === 'template') return;
+
+                // 1. Kumpulkan prompt (hanya dari mode 'single')
+                let prompts = [];
+                const p = inputs.single.value.trim();
+                if (p) prompts.push(p);
+
+                if (prompts.length === 0) {
+                    showMessage("Silakan masukkan prompt di mode Single.", 'error');
+                    return;
+                }
+                
+                // Pastikan tampilan kembali ke canvas jika beralih dari history
+                if (currentView !== 'canvas') {
+                    switchView('canvas');
+                }
+
+                // 2. Setup UI untuk state loading
+                setLoadingState(true);
+                outputGrid.innerHTML = '';
+                generatedImages = [];
+                downloadBtn.classList.add('hidden');
+                
+                const optimizationMode = document.getElementById('select-optimizer').value;
+                const imageCount = parseInt(document.getElementById('image-count').value, 10) || 1;
+                const tasks = [];
+                let cardIndex = 0;
+
+                // 3. Buat placeholder dan siapkan tugas
+                const originalPrompt = prompts[0];
+
+                for (let i = 0; i < imageCount; i++) {
+                    const card = createPlaceholderCard(originalPrompt, cardIndex);
+                    outputGrid.appendChild(card);
+                    const effectiveOptMode = optimizationMode === 'off' ? 'off' : 'image';
+                    
+                    // Panggil processSinglePrompt
+                    tasks.push(processSinglePrompt(originalPrompt, effectiveOptMode, card));
+                    cardIndex++;
+                }
+
+                // 4. Jalankan semua tugas
+                await Promise.allSettled(tasks);
+
+                // 5. Selesai
+                setLoadingState(false);
+                showMessage(`Selesai menghasilkan ${cardIndex} gambar.`, 'success');
+            }
+
+            /**
+             * Menangani regenerasi satu gambar.
+             */
+            async function handleRegenerate(card) {
+                if (isGenerating) return;
+                
+                const originalPrompt = card.dataset.prompt;
+                const index = parseInt(card.dataset.index, 10);
+                const optimizationMode = document.getElementById('select-optimizer').value;
+
+                // Reset card UI ke state loading
+                card.querySelector('.spinner').classList.remove('hidden');
+                card.querySelector('img').classList.add('hidden');
+                card.querySelector('img').src = '';
+                card.querySelector('.regenerate-btn').disabled = true;
+                card.querySelector('.copy-prompt-btn').disabled = true;
+                card.querySelector('.download-single-btn').disabled = true; // Nonaktifkan unduh saat regenerasi
+
+                // Hapus hasil lama dari state
+                generatedImages = generatedImages.filter(img => img.index !== index);
+                
+                const effectiveOptMode = optimizationMode === 'off' ? 'off' : 'image';
+
+                // Panggil processSinglePrompt
+                await processSinglePrompt(originalPrompt, effectiveOptMode, card);
+            }
+
+            /**
+             * Menangani unduh semua gambar sebagai file ZIP.
+             */
+            async function handleDownloadZip() {
+                const validImages = generatedImages.filter(img => img.base64);
+                if (validImages.length === 0) {
+                    showMessage("Tidak ada gambar untuk diunduh.", 'error');
+                    return;
+                }
+
+                showMessage(`Mempersiapkan ${validImages.length} gambar...`, 'info');
+                downloadBtn.disabled = true;
+                downloadBtn.textContent = 'Menyiapkan ZIP...';
+
+                try {
+                    const zip = new JSZip();
+                    for (const image of validImages) {
+                        const base64Data = image.base64.split(',')[1];
+                        zip.file(`image_${image.index + 1}.png`, base64Data, { base64: true });
+                        zip.file(`image_${image.index + 1}_prompt.txt`, image.prompt);
+                    }
+
+                    const blob = await zip.generateAsync({ type: "blob" });
+                    
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'gemini_canvas_export.zip';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+
+                    showMessage('Unduhan ZIP berhasil!', 'success');
+                } catch (error) {
+                    console.error("Gagal membuat ZIP:", error);
+                    showMessage('Gagal membuat file ZIP.', 'error');
+                } finally {
+                    downloadBtn.disabled = false;
+                    downloadBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download All (ZIP)
+                    `;
+                }
+            }
+
+            /**
+             * Mengatur state UI saat loading/generating.
+             */
+            function setLoadingState(loading) {
+                isGenerating = loading;
+                generateBtn.disabled = loading;
+                if (loading) {
+                    generateBtnText.textContent = 'Generating...';
+                    generateIcon.classList.add('animate-spin');
+                } else {
+                    generateBtnText.textContent = 'Generate';
+                    generateIcon.classList.remove('animate-spin');
+                }
+            }
+
+            // === INISIALISASI EVENT LISTENERS ===
+            modeRadios.forEach(radio => radio.addEventListener('change', handleModeChange));
+            
+            // Listeners untuk Referensi Subjek (Multi)
+            uploadSubject.addEventListener('change', (e) => handleImageUpload(e, subjectReferenceBase64s, subjectPreviewContainer, clearSubjectBtn));
+            clearSubjectBtn.addEventListener('click', () => clearImageReferences(subjectReferenceBase64s, uploadSubject, subjectPreviewContainer, clearSubjectBtn));
+            
+            // Listeners untuk Referensi Gaya (Multi)
+            uploadStyle.addEventListener('change', (e) => handleImageUpload(e, styleReferenceBase64s, stylePreviewContainer, clearStyleBtn));
+            clearStyleBtn.addEventListener('click', () => clearImageReferences(styleReferenceBase64s, uploadStyle, stylePreviewContainer, clearStyleBtn));
+            
+            // --- Listeners BARU untuk History ---
+            canvasViewTitle.addEventListener('click', () => switchView('canvas'));
+            historyViewTitle.addEventListener('click', () => switchView('history'));
+            
+            // --- Listeners BARU untuk Modal ---
+            closeModalBtn.addEventListener('click', closePreview);
+            previewModal.addEventListener('click', (e) => {
+                // Tutup jika mengklik background overlay (e.target adalah modal itu sendiri)
+                if (e.target === previewModal) {
+                    closePreview();
+                }
+            });
+
+            // Panggil fungsi untuk membuat tombol template
+            createTemplateButtons(); 
+
+            // Action Listeners
+            generateBtn.addEventListener('click', handleGenerateClick);
+            downloadBtn.addEventListener('click', handleDownloadZip);
+
+            // Inisialiasasi: Tampilkan panel 'single' dan tampilan 'canvas' saat dimuat
+            handleModeChange({ target: { value: 'single' } });
+            switchView('canvas'); // Set initial view
+        });
+    </script>
+</body>
+</html>
