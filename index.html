@@ -58,109 +58,111 @@
     <div class="flex flex-col lg:flex-row min-h-screen lg:h-screen lg:overflow-hidden">
         
         <!-- === PANEL KONTROL (SISI KIRI) === -->
-        <aside class="w-full lg:w-1/3 xl:w-1/4 p-4 lg:p-6 bg-white lg:h-screen lg:overflow-y-auto shadow-lg">
-            <header class="mb-6 pb-4 border-b border-slate-200">
-                <h1 class="text-2xl font-bold text-blue-600">🎨 Gemini Canvas</h1>
-                
-            </header>
-
-            <!-- 1. Pemilih Mode -->
-            <section class="mb-6">
-                <h2 class="text-lg font-semibold mb-3">Pilih Mode</h2>
-                <div class="flex rounded-md border border-slate-300">
-                    <input type="radio" id="mode-single" name="mode" value="single" class="mode-radio" checked>
-                    <label for="mode-single" class="flex-1 text-center py-2 px-3 cursor-pointer rounded-l-md transition-colors duration-200 hover:bg-slate-50">Single</label>
+        <aside class="w-full lg:w-1/3 xl:w-1/4 bg-white lg:h-screen shadow-lg flex flex-col">
+            <!-- Wrapper Konten yang Dapat Di-scroll -->
+            <div class="flex-1 overflow-y-auto p-4 lg:p-6">
+                <header class="mb-6 pb-4 border-b border-slate-200">
+                    <h1 class="text-2xl font-bold text-blue-600">🎨 Gemini Canvas</h1>
                     
-                    <input type="radio" id="mode-template" name="mode" value="template" class="mode-radio">
-                    <label for="mode-template" class="flex-1 text-center py-2 px-3 cursor-pointer rounded-r-md transition-colors duration-200 hover:bg-slate-50">Template</label>
-                </div>
-            </section>
+                </header>
 
-            <!-- 2. Panel Input (Kondisional) -->
-            <section class="mb-6">
-                <!-- 2a. Single Prompt Mode -->
-                <div id="panel-single">
-                    <label for="prompt-single" class="text-lg font-semibold mb-3 block">Prompt Tunggal</label>
-                    <textarea id="prompt-single" rows="4" class="w-full p-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cth: Kucing cyberpunk di Tokyo neon, tambahkan detail visual di sini..."></textarea>
-                </div>
-
-                <!-- 2b. Template Mode -->
-                <div id="panel-template" class="hidden">
-                    <label class="text-lg font-semibold mb-3 block">Pilih Template Gaya</label>
-                    <p class="text-sm text-slate-600 mb-4">Pilih template di bawah ini untuk mengisi prompt Anda secara otomatis. **Ganti [SUBJECT] dengan subjek Anda!**</p>
-                    <div id="template-buttons" class="grid grid-cols-2 gap-3">
-                        <!-- Tombol template akan dibuat oleh JavaScript -->
+                <!-- 1. Pemilih Mode -->
+                <section class="mb-6">
+                    <div class="flex rounded-md border border-slate-300">
+                        <input type="radio" id="mode-single" name="mode" value="single" class="mode-radio" checked>
+                        <label for="mode-single" class="flex-1 text-center py-2 px-3 cursor-pointer rounded-l-md transition-colors duration-200 hover:bg-slate-50">Single</label>
+                        
+                        <input type="radio" id="mode-template" name="mode" value="template" class="mode-radio">
+                        <label for="mode-template" class="flex-1 text-center py-2 px-3 cursor-pointer rounded-r-md transition-colors duration-200 hover:bg-slate-50">Template</label>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- 3. Opsi Tambahan -->
-            <section class="mb-6 space-y-4">
-                <h2 class="text-lg font-semibold mb-3">Opsi</h2>
-                <!-- 3a. Prompt Optimizer -->
-                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200">
-                    <label for="select-optimizer" class="font-medium text-slate-700">Optimize Prompt</label>
-                    <select id="select-optimizer" class="w-auto p-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="off">Tidak (Gunakan Asli)</option>
-                        <option value="image">Ya (Per Gambar)</option>
-                    </select>
-                </div>
-                
-                <!-- Jumlah Gambar per Prompt -->
-                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200">
-                    <label for="image-count" class="font-medium text-slate-700">Jml. Gambar / Prompt</label>
-                    <input type="number" id="image-count" value="1" min="1" max="10" class="w-20 p-2 border border-slate-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-
-                <!-- Rasio Aspek (BARU) -->
-                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200">
-                    <label for="select-aspect-ratio" class="font-medium text-slate-700">Rasio Aspek</label>
-                    <select id="select-aspect-ratio" class="w-auto p-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="1:1">1:1 (Square)</option>
-                        <option value="16:9">16:9 (Landscape)</option>
-                        <option value="9:16">9:16 (Portrait)</option>
-                        <option value="4:3">4:3 (Landscape)</option>
-                        <option value="3:4">3:4 (Portrait)</option>
-                    </select>
-                </div>
-
-                <!-- 3b. Referensi Subjek (Telah dimodifikasi untuk 'multiple') -->
-                <div class="p-3 bg-slate-50 rounded-md border border-slate-200">
-                    <label for="upload-subject" class="font-medium text-slate-700 mb-2 block">Referensi Subjek (Contoh Produk)</label>
-                    <input type="file" id="upload-subject" accept="image/*" multiple class="block w-full text-sm text-slate-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-full file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-blue-50 file:text-blue-700
-                        hover:file:bg-blue-100 cursor-pointer">
-                    <!-- Pratinjau untuk multi-gambar -->
-                    <div id="subject-preview-container" class="hidden mt-3 flex flex-wrap gap-2 justify-center">
-                        <!-- Gambar pratinjau akan ditambahkan oleh JS di sini -->
+                <!-- 2. Panel Input (Kondisional) -->
+                <section class="mb-6">
+                    <!-- 2a. Single Prompt Mode -->
+                    <div id="panel-single">
+                        <label for="prompt-single" class="text-lg font-semibold mb-3 block">Prompt Tunggal</label>
+                        <textarea id="prompt-single" rows="4" class="w-full p-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cth: Kucing cyberpunk di Tokyo neon, tambahkan detail visual di sini..."></textarea>
                     </div>
-                    <button id="clear-subject" class="hidden text-xs text-red-500 hover:text-red-700 mt-2 w-full text-center">Hapus Semua Subjek</button>
-                    <p class="text-xs text-slate-500 mt-2">Gunakan ini untuk mempertahankan bentuk atau objek utama. Bisa unggah lebih dari satu.</p>
-                </div>
 
-                <!-- 3c. Style Reference (Telah dimodifikasi untuk 'multiple') -->
-                <div class="p-3 bg-slate-50 rounded-md border border-slate-200">
-                    <label for="upload-style" class="font-medium text-slate-700 mb-2 block">Referensi Gaya (Opsional)</label>
-                    <input type="file" id="upload-style" accept="image/*" multiple class="block w-full text-sm text-slate-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-full file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-blue-50 file:text-blue-700
-                        hover:file:bg-blue-100 cursor-pointer">
-                    <!-- Pratinjau untuk multi-gambar -->
-                    <div id="style-preview-container" class="hidden mt-3 flex flex-wrap gap-2 justify-center">
-                        <!-- Gambar pratinjau akan ditambahkan oleh JS di sini -->
+                    <!-- 2b. Template Mode -->
+                    <div id="panel-template" class="hidden">
+                        <label class="text-lg font-semibold mb-3 block">Pilih Template Gaya</label>
+                        <p class="text-sm text-slate-600 mb-4">Pilih template di bawah ini untuk mengisi prompt Anda secara otomatis. **Ganti [SUBJECT] dengan subjek Anda!**</p>
+                        <div id="template-buttons" class="grid grid-cols-2 gap-3">
+                            <!-- Tombol template akan dibuat oleh JavaScript -->
+                        </div>
                     </div>
-                    <button id="clear-style" class="hidden text-xs text-red-500 hover:text-red-700 mt-2 w-full text-center">Hapus Semua Gaya</button>
-                    <p class="text-xs text-slate-500 mt-2">Gunakan ini untuk menerapkan tone, warna, atau tekstur. Bisa unggah lebih dari satu.</p>
-                </div>
-            </section>
+                </section>
 
-            <!-- 4. Tombol Aksi Utama -->
-            <section>
+                <!-- 3. Opsi Tambahan -->
+                <section class="mb-6 space-y-4">
+                    <h2 class="text-lg font-semibold mb-3">Opsi</h2>
+                    <!-- 3a. Prompt Optimizer -->
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200">
+                        <label for="select-optimizer" class="font-medium text-slate-700">Optimize Prompt</label>
+                        <select id="select-optimizer" class="w-auto p-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="off">Tidak (Gunakan Asli)</option>
+                            <option value="image">Ya (Per Gambar)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Jumlah Gambar per Prompt -->
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200">
+                        <label for="image-count" class="font-medium text-slate-700">Jml. Gambar / Prompt</label>
+                        <input type="number" id="image-count" value="1" min="1" max="10" class="w-20 p-2 border border-slate-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Rasio Aspek (BARU) -->
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200">
+                        <label for="select-aspect-ratio" class="font-medium text-slate-700">Rasio Aspek</label>
+                        <select id="select-aspect-ratio" class="w-auto p-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="1:1">1:1 (Square)</option>
+                            <option value="16:9">16:9 (Landscape)</option>
+                            <option value="9:16">9:16 (Portrait)</option>
+                            <option value="4:3">4:3 (Landscape)</option>
+                            <option value="3:4">3:4 (Portrait)</option>
+                        </select>
+                    </div>
+
+                    <!-- 3b. Referensi Subjek (Telah dimodifikasi untuk 'multiple') -->
+                    <div class="p-3 bg-slate-50 rounded-md border border-slate-200">
+                        <label for="upload-subject" class="font-medium text-slate-700 mb-2 block">Referensi Subjek (Contoh Produk)</label>
+                        <input type="file" id="upload-subject" accept="image/*" multiple class="block w-full text-sm text-slate-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-blue-50 file:text-blue-700
+                            hover:file:bg-blue-100 cursor-pointer">
+                        <!-- Pratinjau untuk multi-gambar -->
+                        <div id="subject-preview-container" class="hidden mt-3 flex flex-wrap gap-2 justify-center">
+                            <!-- Gambar pratinjau akan ditambahkan oleh JS di sini -->
+                        </div>
+                        <button id="clear-subject" class="hidden text-xs text-red-500 hover:text-red-700 mt-2 w-full text-center">Hapus Semua Subjek</button>
+                        <p class="text-xs text-slate-500 mt-2">Gunakan ini untuk mempertahankan bentuk atau objek utama. Bisa unggah lebih dari satu.</p>
+                    </div>
+
+                    <!-- 3c. Style Reference (Telah dimodifikasi untuk 'multiple') -->
+                    <div class="p-3 bg-slate-50 rounded-md border border-slate-200">
+                        <label for="upload-style" class="font-medium text-slate-700 mb-2 block">Referensi Gaya (Opsional)</label>
+                        <input type="file" id="upload-style" accept="image/*" multiple class="block w-full text-sm text-slate-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-blue-50 file:text-blue-700
+                            hover:file:bg-blue-100 cursor-pointer">
+                        <!-- Pratinjau untuk multi-gambar -->
+                        <div id="style-preview-container" class="hidden mt-3 flex flex-wrap gap-2 justify-center">
+                            <!-- Gambar pratinjau akan ditambahkan oleh JS di sini -->
+                        </div>
+                        <button id="clear-style" class="hidden text-xs text-red-500 hover:text-red-700 mt-2 w-full text-center">Hapus Semua Gaya</button>
+                        <p class="text-xs text-slate-500 mt-2">Gunakan ini untuk menerapkan tone, warna, atau tekstur. Bisa unggah lebih dari satu.</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 4. Tombol Aksi Utama (Sticky Bottom) -->
+            <section class="p-4 lg:p-6 border-t border-slate-200">
                 <button id="generate-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 shadow-md flex items-center justify-center gap-2">
                     <svg id="generate-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9 1.9 5.8 1.9-5.8 5.8-1.9-5.8-1.9z"/><path d="m22 12-1.9 5.8-5.8 1.9 5.8 1.9 1.9 5.8 1.9-5.8 5.8-1.9-5.8-1.9z"/><path d="m2 10 1.9 5.8 5.8 1.9-5.8 1.9-1.9 5.8-1.9-5.8-5.8-1.9 5.8-1.9z"/></svg>
                     <span id="generate-btn-text">Generate</span>
@@ -268,7 +270,7 @@
             const modalImage = document.getElementById('modal-image');
             const closeModalBtn = document.getElementById('close-modal-btn');
 
-            const HISTORY_KEY = 'gemini_image_history';
+            // const HISTORY_KEY = 'gemini_image_history'; // TIDAK DIGUNAKAN LAGI
             let currentView = 'canvas'; // 'canvas' atau 'history'
 
             // === STATE APLIKASI ===
@@ -278,53 +280,144 @@
             let generatedImages = [];
             let isGenerating = false;
 
-            // === LOGIKA HISTORY ===
+            // === (BARU) LOGIKA INDEXEDDB UNTUK HISTORY ===
+            
+            let db; // Global DB connection instance
+            const DB_NAME = 'GeminiCanvasHistoryDB';
+            const STORE_NAME = 'images';
+            const DB_VERSION = 1;
+            const MAX_HISTORY_ITEMS = 50; // Batas item riwayat
 
             /**
-             * Memuat riwayat dari localStorage.
-             * Riwayat disimpan sebagai Array of { id, timestamp, prompt, base64 }
+             * Menginisialisasi dan mendapatkan koneksi IndexedDB.
              */
-            function loadHistory() {
+            function getDB() {
+                return new Promise((resolve, reject) => {
+                    // Jika koneksi sudah ada, kembalikan
+                    if (db) {
+                        return resolve(db);
+                    }
+
+                    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                    request.onupgradeneeded = (e) => {
+                        const dbInstance = e.target.result;
+                        // Buat object store jika belum ada
+                        if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
+                            const store = dbInstance.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                            // Buat indeks untuk timestamp agar bisa di-query/diurutkan
+                            store.createIndex('timestamp', 'timestamp', { unique: false });
+                        }
+                    };
+
+                    request.onsuccess = (e) => {
+                        db = e.target.result; // Simpan koneksi
+                        resolve(db);
+                    };
+
+                    request.onerror = (e) => {
+                        console.error("IndexedDB error:", e.target.error);
+                        reject(e.target.error);
+                    };
+                });
+            }
+
+            /**
+             * Memuat riwayat dari IndexedDB (Async).
+             * Mengambil 50 item terbaru.
+             */
+            async function loadHistory() {
                 try {
-                    const json = localStorage.getItem(HISTORY_KEY);
-                    // Generate a random ID if crypto.randomUUID is not available (fallback)
-                    const fallbackId = () => Math.random().toString(36).substring(2, 10);
+                    const db = await getDB(); // Pastikan DB siap
                     
-                    const history = json ? JSON.parse(json) : [];
-                    // Ensure all history items have an 'id' for better tracking/downloading
-                    return history.map(item => ({
-                        ...item,
-                        id: item.id || fallbackId()
-                    }));
+                    // Menggunakan Promise agar bisa di-await
+                    return new Promise((resolve, reject) => {
+                        const tx = db.transaction(STORE_NAME, 'readonly');
+                        const store = tx.objectStore(STORE_NAME);
+                        const index = store.index('timestamp'); // Gunakan indeks
+                        
+                        const history = [];
+                        // Buka kursor pada indeks, urutkan descending ('prev')
+                        const request = index.openCursor(null, 'prev'); 
+                        
+                        request.onsuccess = (e) => {
+                            const cursor = e.target.result;
+                            // Jika ada kursor dan riwayat belum penuh (MAX_HISTORY_ITEMS)
+                            if (cursor && history.length < MAX_HISTORY_ITEMS) {
+                                history.push(cursor.value); // Tambahkan item
+                                cursor.continue(); // Lanjutkan ke item berikutnya
+                            } else {
+                                resolve(history); // Selesai, kembalikan array riwayat
+                            }
+                        };
+                        request.onerror = (e) => {
+                            console.error("Gagal membuka kursor:", e.target.error);
+                            reject(e.target.error);
+                        };
+                    });
 
                 } catch (e) {
-                    console.error("Gagal memuat riwayat dari localStorage", e);
-                    return [];
+                    console.error("Gagal memuat riwayat dari IndexedDB", e);
+                    return []; // Return array kosong jika gagal
                 }
             }
 
             /**
-             * Menyimpan riwayat gambar baru ke localStorage.
+             * Menyimpan riwayat gambar baru ke IndexedDB (Async).
+             * Juga akan memangkas (prune) item lama jika melebihi batas.
              */
-            function saveImageToHistory(item) {
-                const history = loadHistory();
-                // Batasi riwayat agar tidak terlalu besar (misalnya, 50 item)
-                history.unshift(item); 
-                if (history.length > 50) history.pop();
-
+            async function saveImageToHistory(item) {
                 try {
-                    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+                    const db = await getDB(); // Pastikan DB siap
+                    
+                    // Mulai transaksi readwrite
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    
+                    // 1. Tambahkan item baru (put akan 'add' or 'update')
+                    store.put(item);
+
+                    // 2. Pruning (Hapus item lama jika lebih dari MAX_HISTORY_ITEMS)
+                    const index = store.index('timestamp');
+                    const cursorRequest = index.openCursor(null, 'prev'); // Newest first
+                    
+                    let count = 0;
+                    // Ini akan berjalan secara paralel dengan 'put' dalam transaksi yang sama
+                    cursorRequest.onsuccess = (e) => {
+                        const cursor = e.target.result;
+                        if (cursor) {
+                            count++;
+                            if (count > MAX_HISTORY_ITEMS) {
+                                // Ditemukan item ke-51 (atau lebih), hapus
+                                store.delete(cursor.primaryKey);
+                            }
+                            cursor.continue();
+                        }
+                    };
+
+                    // Kembalikan promise yang resolve saat transaksi selesai
+                    return new Promise((resolve, reject) => {
+                        tx.oncomplete = () => {
+                            // console.log("Riwayat berhasil disimpan & dipangkas.");
+                            resolve();
+                        };
+                        tx.onerror = (e) => {
+                            console.error("Transaksi penyimpanan riwayat gagal:", e.target.error);
+                            reject(e.target.error);
+                        };
+                    });
+
                 } catch (e) {
-                    console.error("Gagal menyimpan riwayat ke localStorage", e);
+                    console.error("Gagal menyimpan riwayat ke IndexedDB", e);
                 }
             }
             
             /**
-             * Merender daftar riwayat.
+             * Merender daftar riwayat (Async).
              */
-            function renderHistory() {
+            async function renderHistory() {
                 historyContainer.innerHTML = '';
-                const history = loadHistory();
+                const history = await loadHistory(); // Panggil versi async
 
                 if (history.length === 0) {
                     historyContainer.innerHTML = `<p class="text-center text-slate-500 py-10">Tidak ada riwayat. Hasilkan gambar untuk memulai!</p>`;
@@ -375,9 +468,9 @@
             }
 
             /**
-             * Menangani pergantian tampilan antara Canvas dan History.
+             * Menangani pergantian tampilan antara Canvas dan History (Async).
              */
-            function switchView(view) {
+            async function switchView(view) {
                 currentView = view;
                 if (view === 'canvas') {
                     outputGrid.classList.remove('hidden');
@@ -403,7 +496,7 @@
                     canvasViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-normal');
                     downloadBtn.classList.add('hidden'); // Sembunyikan tombol ZIP di tampilan History
                     
-                    renderHistory();
+                    await renderHistory(); // Panggil versi async
                 }
             }
 
@@ -635,11 +728,11 @@
 
                 let filesLoaded = 0;
                 previewContainer.innerHTML = ''; // Bersihkan pratinjau lama
+                stateArray.length = 0; // Kosongkan array state saat unggah baru
 
                 if (files.length === 0) {
                     previewContainer.classList.add('hidden');
                     clearButton.classList.add('hidden');
-                    stateArray.length = 0; // Kosongkan array
                     return;
                 }
 
@@ -776,7 +869,8 @@
                 });
                 // ---------------------------------------------------
 
-                card.querySelector('.regenerate-btn').addEventListener('click', () => handleRegenerate(card));
+                // (PERUBAHAN) Menjadikan listener async untuk menangani handleRegenerate
+                card.querySelector('.regenerate-btn').addEventListener('click', async () => await handleRegenerate(card));
                 
                 const copyBtn = card.querySelector('.copy-prompt-btn');
                 copyBtn.addEventListener('click', () => {
@@ -805,7 +899,7 @@
             }
 
             /**
-             * Memperbarui kartu dengan gambar dan info.
+             * Memperbarui kartu dengan gambar dan info (Async).
              */
             async function updateCard(card, finalPrompt, imageBase64) {
                 const spinner = card.querySelector('.spinner');
@@ -826,7 +920,7 @@
                     downloadSingleBtn.disabled = false; // Aktifkan tombol unduh
                     // -----------------------------
                     
-                    // --- Simpan ke Riwayat (BARU) ---
+                    // --- Simpan ke Riwayat (Async) ---
                     const historyItem = {
                         // Use crypto.randomUUID for unique ID, fallback if unavailable
                         id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2, 10),
@@ -834,7 +928,7 @@
                         prompt: finalPrompt,
                         base64: imageBase64,
                     };
-                    saveImageToHistory(historyItem);
+                    await saveImageToHistory(historyItem); // (PERUBAHAN) await
                     // ---------------------------------
 
                 } else {
@@ -866,7 +960,7 @@
             }
 
             /**
-             * Memproses satu prompt (optimize + generate).
+             * Memproses satu prompt (optimize + generate) (Async).
              */
             async function processSinglePrompt(originalPrompt, optimizationMode, card) {
                 let finalPrompt = originalPrompt;
@@ -883,11 +977,11 @@
 
                     // Panggil generateImage dengan kedua referensi gambar
                     const imageBase64 = await generateImage(finalPrompt, styleReferenceBase64s, subjectReferenceBase64s);
-                    updateCard(card, finalPrompt, imageBase64);
+                    await updateCard(card, finalPrompt, imageBase64); // (PERUBAHAN) await
                 
                 } catch (error) {
                     console.error(`Gagal memproses prompt: ${originalPrompt}`, error);
-                    updateCard(card, finalPrompt, null);
+                    await updateCard(card, finalPrompt, null); // (PERUBAHAN) await
                 }
             }
 
@@ -909,7 +1003,7 @@
                 
                 // Pastikan tampilan kembali ke canvas jika beralih dari history
                 if (currentView !== 'canvas') {
-                    switchView('canvas');
+                    await switchView('canvas'); // (PERUBAHAN) await
                 }
 
                 // 2. Setup UI untuk state loading
@@ -931,7 +1025,7 @@
                     outputGrid.appendChild(card);
                     const effectiveOptMode = optimizationMode === 'off' ? 'off' : 'image';
                     
-                    // Panggil processSinglePrompt
+                    // Panggil processSinglePrompt (yang sekarang async)
                     tasks.push(processSinglePrompt(originalPrompt, effectiveOptMode, card));
                     cardIndex++;
                 }
@@ -945,7 +1039,7 @@
             }
 
             /**
-             * Menangani regenerasi satu gambar.
+             * Menangani regenerasi satu gambar (Async).
              */
             async function handleRegenerate(card) {
                 if (isGenerating) return;
@@ -967,7 +1061,7 @@
                 
                 const effectiveOptMode = optimizationMode === 'off' ? 'off' : 'image';
 
-                // Panggil processSinglePrompt
+                // Panggil processSinglePrompt (yang sekarang async)
                 await processSinglePrompt(originalPrompt, effectiveOptMode, card);
             }
 
@@ -1042,9 +1136,9 @@
             uploadStyle.addEventListener('change', (e) => handleImageUpload(e, styleReferenceBase64s, stylePreviewContainer, clearStyleBtn));
             clearStyleBtn.addEventListener('click', () => clearImageReferences(styleReferenceBase64s, uploadStyle, stylePreviewContainer, clearStyleBtn));
             
-            // --- Listeners BARU untuk History ---
-            canvasViewTitle.addEventListener('click', () => switchView('canvas'));
-            historyViewTitle.addEventListener('click', () => switchView('history'));
+            // --- Listeners BARU untuk History (dibuat async) ---
+            canvasViewTitle.addEventListener('click', async () => await switchView('canvas'));
+            historyViewTitle.addEventListener('click', async () => await switchView('history'));
             
             // --- Listeners BARU untuk Modal ---
             closeModalBtn.addEventListener('click', closePreview);
@@ -1059,12 +1153,21 @@
             createTemplateButtons(); 
 
             // Action Listeners
-            generateBtn.addEventListener('click', handleGenerateClick);
+            generateBtn.addEventListener('click', handleGenerateClick); // handleGenerateClick sudah async
             downloadBtn.addEventListener('click', handleDownloadZip);
 
             // Inisialiasasi: Tampilkan panel 'single' dan tampilan 'canvas' saat dimuat
             handleModeChange({ target: { value: 'single' } });
-            switchView('canvas'); // Set initial view
+            
+            // (PERUBAHAN) Inisialisasi DB saat load dan set tampilan awal
+            getDB().then(() => {
+                console.log("Database riwayat berhasil diinisialisasi.");
+                switchView('canvas'); // Set initial view
+            }).catch(err => {
+                console.error("Gagal inisialisasi database:", err);
+                showMessage("Gagal memuat database riwayat.", "error");
+                switchView('canvas'); // Tetap set tampilan awal
+            });
         });
     </script>
 </body>
