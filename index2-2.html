@@ -120,8 +120,22 @@
                         <div id="template-buttons" class="grid grid-cols-2 gap-2"></div>
                     </div>
                     
-                    <!-- (BARU) Panel Mode List -->
+                    <!-- (DIMODIFIKASI) Panel Mode List -->
                     <div id="panel-list" class="hidden space-y-3">
+                        <!-- (BARU) Bagian URL Google Sheet -->
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                            <label for="list-sheet-url" class="text-sm font-semibold text-slate-700 block">URL Google Sheet (CSV)</label>
+                            <input type="text" id="list-sheet-url" class="w-full p-2 border border-slate-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" placeholder="Tempel URL ...pub?output=csv">
+                            <div class="flex gap-2 justify-between items-center mt-2">
+                                <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQLBAtKrciBdKf0A0UpkcwtgyegbOpQhrsw1Q7sSBw7Ttv1YGbpinSRJKTg0Cs3k_-Rzz6ig4UQNN_w/pub?output=csv" target="_blank" class="text-xs text-blue-600 hover:underline">
+                                    Lihat Contoh
+                                </a>
+                                <button id="save-list-url-btn" class="text-xs py-1.5 px-3 rounded-md font-semibold bg-green-500 text-white hover:bg-green-600 transition-colors">
+                                    Simpan
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
                             <label class="text-sm font-semibold text-slate-700 block">Status Batch</label>
                             <p class="text-xs text-slate-500 mt-1 mb-2">Ambil daftar prompt dari Google Sheet.</p>
@@ -265,6 +279,11 @@
             const API_URL_IMAGE_GEN = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
             const API_URL_IMAGE_EDIT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${API_KEY}`; 
 
+            // === (BARU) KONSTANTA APLIKASI ===
+            const LIST_URL_KEY = 'geminiCanvasListUrl';
+            const DEFAULT_TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTV-HBT1ra1sdrTL_2DjT_wFvdASQILFfwmZx4nYmR-uv-8Y8rturIAWlKWqnDQBeLr65NpgiYpKV2K/pub?output=csv";
+            const DEFAULT_LIST_EXAMPLE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLBAtKrciBdKf0A0UpkcwtgyegbOpQhrsw1Q7sSBw7Ttv1YGbpinSRJKTg0Cs3k_-Rzz6ig4UQNN_w/pub?output=csv";
+
             // === REFERENSI DOM ===
             const modeRadios = document.querySelectorAll('input[name="mode"]');
             const panels = {
@@ -276,9 +295,11 @@
                 single: document.getElementById('prompt-single'),
             };
             const templateButtonsContainer = document.getElementById('template-buttons');
-            const syncTemplatesBtn = document.getElementById('sync-templates-btn'); // (BARU) Tombol Sync Template
+            const syncTemplatesBtn = document.getElementById('sync-templates-btn');
             
-            // (BARU) DOM Referensi untuk Panel List
+            // (DIMODIFIKASI) DOM Referensi untuk Panel List
+            const listSheetUrlInput = document.getElementById('list-sheet-url'); // (BARU)
+            const saveListUrlBtn = document.getElementById('save-list-url-btn'); // (BARU)
             const syncListBtn = document.getElementById('sync-list-btn');
             const listTotalCount = document.getElementById('list-total-count');
             const listCurrentPrompt = document.getElementById('list-current-prompt');
@@ -328,6 +349,7 @@
             let isGenerating = false;
             let selectedTemplatePrompt = null; 
             let fetchedTemplates = []; 
+            let fetchedListPrompts = []; // (BARU) State terpisah untuk Mode List
 
             // (BARU) State untuk Mode List
             let isBatchRunning = false;
@@ -618,9 +640,12 @@
 
             // === FUNGSI INTI ===
             
+            /**
+             * (DIMODIFIKASI) Hanya mengambil dan me-render template untuk Mode Template
+             */
             async function fetchAndRenderTemplates() {
                 showMessage("Memuat template dari Google Sheet...", 'info');
-                const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTV-HBT1ra1sdrTL_2DjT_wFvdASQILFfwmZx4nYmR-uv-8Y8rturIAWlKWqnDQBeLr65NpgiYpKV2K/pub?output=csv";
+                const csvUrl = DEFAULT_TEMPLATE_URL; // Gunakan URL template default
                 try {
                     const response = await fetch(csvUrl);
                     if (!response.ok) throw new Error(`Gagal mengambil CSV: ${response.statusText}`);
@@ -650,15 +675,70 @@
                         return null;
                     }).filter(t => t && t.name && t.prompt);
 
-                    fetchedTemplates = templates; // Simpan di state global
+                    fetchedTemplates = templates; // Simpan di state template
                     showMessage(`Berhasil memuat ${templates.length} template.`, 'success');
                     renderTemplateButtons(templates); // Render tombol template
-                    listTotalCount.textContent = templates.length; // (BARU) Update total list
                 } catch (error) {
                     console.error("Gagal memuat template:", error);
                     showMessage("Gagal memuat template. Menggunakan daftar kosong.", 'error');
                     fetchedTemplates = [];
                     renderTemplateButtons([]);
+                }
+            }
+
+            /**
+             * (BARU) Mengambil dan mem-parsing prompt untuk Mode List
+             */
+            async function fetchListPrompts() {
+                showMessage("Memuat daftar prompt dari Google Sheet...", 'info');
+                const csvUrl = listSheetUrlInput.value || DEFAULT_LIST_EXAMPLE_URL;
+                if (!csvUrl) {
+                    showMessage("URL Google Sheet untuk Mode List belum diatur.", 'error');
+                    listTotalCount.textContent = 0;
+                    fetchedListPrompts = [];
+                    return;
+                }
+
+                try {
+                    const response = await fetch(csvUrl);
+                    if (!response.ok) throw new Error(`Gagal mengambil CSV: ${response.statusText}`);
+                    const csvText = await response.text();
+                    const lines = csvText.trim().split('\n');
+                    lines.shift(); // Hapus header
+
+                    const prompts = lines.map(line => {
+                        const values = [];
+                        let inQuote = false;
+                        let field = '';
+                        for (let i = 0; i < line.length; i++) {
+                            const char = line[i];
+                            if (char === '"') inQuote = !inQuote;
+                            else if (char === ',' && !inQuote) { values.push(field.trim().replace(/^"|"$/g, '')); field = ''; }
+                            else field += char;
+                        }
+                        values.push(field.trim().replace(/^"|"$/g, ''));
+                        
+                        // (PERBAIKAN) Ubah logika untuk menerima 1 kolom
+                        if (values.length >= 1 && values[0]) {
+                            const promptText = values[0];
+                            return { 
+                                category: "Daftar", // Kategori default
+                                // Gunakan prompt sebagai nama, potong agar tidak terlalu panjang
+                                name: promptText.substring(0, 50) + (promptText.length > 50 ? "..." : ""), 
+                                description: "Prompt dari Google Sheet 1-kolom.", // Deskripsi default
+                                prompt: promptText 
+                            };
+                        }
+                        return null;
+                    }).filter(t => t && t.name && t.prompt); // Filter ini akan tetap berfungsi
+
+                    fetchedListPrompts = prompts; // Simpan di state list
+                    showMessage(`Berhasil memuat ${prompts.length} prompt untuk batch.`, 'success');
+                    listTotalCount.textContent = prompts.length; // Update total list
+                } catch (error) {
+                    console.error("Gagal memuat daftar prompt:", error);
+                    showMessage("Gagal memuat daftar prompt. Periksa URL.", 'error');
+                    fetchedListPrompts = [];
                     listTotalCount.textContent = 0;
                 }
             }
@@ -708,11 +788,18 @@
                     };
                 }
                 const result = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                
                 if (useMultimodal) {
                     const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                    if (!base64Data) { // (PERBAIKAN) Tambahkan logging jika gambar tidak ditemukan
+                        console.error("Respon multimodal tidak mengandung gambar:", JSON.stringify(result, null, 2));
+                    }
                     return base64Data ? `data:image/png;base64,${base64Data}` : null;
                 } else {
                     const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
+                    if (!base64Data) { // (PERBAIKAN) Tambahkan logging jika gambar tidak ditemukan
+                        console.error("Respon text-to-image tidak mengandung gambar:", JSON.stringify(result, null, 2));
+                    }
                     return base64Data ? `data:image/png;base64,${base64Data}` : null;
                 }
             }
@@ -827,7 +914,7 @@
                         optimizerContainer.classList.add('hidden');
                         subjectReferenceContainer.classList.add('hidden'); // Sembunyikan ref subjek di mode batch
 
-                        listTotalCount.textContent = fetchedTemplates.length;
+                        listTotalCount.textContent = fetchedListPrompts.length; // (DIMODIFIKASI)
                         listCurrentPrompt.textContent = 'N/A';
                         generateBtnText.textContent = 'Mulai Batch';
                         break;
@@ -891,12 +978,12 @@
             async function handleGenerateClick() {
                 if (isGenerating && currentMode !== 'list') return;
 
-                // (BARU) Logika Mode List
+                // (DIMODIFIKASI) Logika Mode List
                 if (currentMode === 'list') {
                     if (isBatchRunning) {
                         stopBatchGeneration();
                     } else {
-                        await startBatchGeneration();
+                        await startBatchGeneration(); // Menggunakan fetchedListPrompts
                     }
                     return;
                 }
@@ -1087,15 +1174,22 @@
                     generateBtnText.textContent = 'Generating...';
                     generateIcon.classList.add('animate-spin');
                 } else {
-                    generateBtnText.textContent = 'Generate';
+                    generateBtnText.textContent = 'Hasilkan Gambar'; // Default
+                    // Sesuaikan teks tombol berdasarkan mode saat ini
+                    if (currentMode === 'list') {
+                        generateBtnText.textContent = 'Mulai Batch';
+                    } else {
+                        generateBtnText.textContent = 'Hasilkan Gambar';
+                    }
                     generateIcon.classList.remove('animate-spin');
                 }
             }
             
-            // === (BARU) FUNGSI MODE LIST ===
+            // === (DIMODIFIKASI) FUNGSI MODE LIST ===
             
             async function startBatchGeneration() {
-                if (fetchedTemplates.length === 0) {
+                // (DIMODIFIKASI) Gunakan state list
+                if (fetchedListPrompts.length === 0) {
                     showMessage("Daftar prompt kosong. Sinkronkan terlebih dahulu.", 'error');
                     return;
                 }
@@ -1106,10 +1200,11 @@
 
                 isBatchRunning = true;
                 currentBatchIndex = 0;
-                setLoadingState(true);
+                setLoadingState(true); // Ini akan memanggil setLoadingState
                 generateBtnText.textContent = 'Hentikan Batch';
                 generateBtn.classList.remove('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
                 generateBtn.classList.add('from-red-500', 'to-red-600', 'hover:from-red-600', 'hover:to-red-700');
+                generateIcon.classList.remove('animate-spin'); // Hentikan spin di tombol batch
                 
                 outputGrid.innerHTML = ''; // Bersihkan grid untuk batch baru
                 generatedImages = [];
@@ -1123,7 +1218,7 @@
                     clearTimeout(batchTimeoutId);
                     batchTimeoutId = null;
                 }
-                setLoadingState(false);
+                setLoadingState(false); // Ini akan memanggil setLoadingState
                 generateBtnText.textContent = 'Mulai Batch';
                 generateBtn.classList.add('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
                 generateBtn.classList.remove('from-red-500', 'to-red-600', 'hover:from-red-600', 'hover:to-red-700');
@@ -1134,17 +1229,18 @@
             async function runBatchTask() {
                 if (!isBatchRunning) return; // Berhenti jika flag di-set false
 
-                if (currentBatchIndex >= fetchedTemplates.length) {
+                // (DIMODIFIKASI) Gunakan state list
+                if (currentBatchIndex >= fetchedListPrompts.length) {
                     showMessage("Batch selesai!", 'success');
                     stopBatchGeneration();
                     listCurrentPrompt.textContent = 'Selesai';
                     return;
                 }
 
-                const template = fetchedTemplates[currentBatchIndex];
+                const template = fetchedListPrompts[currentBatchIndex];
                 const originalPrompt = template.prompt.replace(/\[SUBJECT\]/gi, ''); // Hapus [SUBJECT] jika ada
                 
-                listCurrentPrompt.textContent = `${currentBatchIndex + 1}/${fetchedTemplates.length}: ${template.name}`;
+                listCurrentPrompt.textContent = `${currentBatchIndex + 1}/${fetchedListPrompts.length}: ${template.name}`;
                 showMessage(`Batch berjalan: Memproses "${template.name}"...`, 'info');
 
                 const imageCount = parseInt(document.getElementById('image-count').value, 10) || 1;
@@ -1174,6 +1270,23 @@
                 batchTimeoutId = setTimeout(runBatchTask, interval);
             }
 
+            // (BARU) Fungsi untuk memuat dan menyimpan URL List
+            function loadListUrl() {
+                const savedUrl = localStorage.getItem(LIST_URL_KEY);
+                listSheetUrlInput.value = savedUrl || DEFAULT_LIST_EXAMPLE_URL;
+            }
+
+            async function saveAndFetchListUrl() {
+                const url = listSheetUrlInput.value.trim();
+                if (!url) {
+                    showMessage("URL tidak boleh kosong.", "error");
+                    return;
+                }
+                localStorage.setItem(LIST_URL_KEY, url);
+                showMessage("URL Google Sheet disimpan!", "success");
+                await fetchListPrompts(); // Ambil data setelah menyimpan
+            }
+
             // === INISIALISASI EVENT LISTENERS ===
             modeRadios.forEach(radio => radio.addEventListener('change', handleModeChange));
             
@@ -1199,12 +1312,15 @@
             });
             previewModal.addEventListener('click', (e) => { if (e.target === previewModal) closePreview(); });
 
-            // (MODIFIKASI) Ganti nama fungsi
+            // (DIMODIFIKASI) Event listener dipisahkan
             syncTemplatesBtn.addEventListener('click', fetchAndRenderTemplates);
-            syncListBtn.addEventListener('click', fetchAndRenderTemplates); // (BARU) Tombol sync di mode list
+            syncListBtn.addEventListener('click', fetchListPrompts);
+            saveListUrlBtn.addEventListener('click', saveAndFetchListUrl); // (BARU)
 
             (async () => {
                 await fetchAndRenderTemplates(); // Panggil saat memuat
+                loadListUrl(); // (BARU) Muat URL list
+                await fetchListPrompts(); // (BARU) Panggil saat memuat
             })();
 
             generateBtn.addEventListener('click', handleGenerateClick);
