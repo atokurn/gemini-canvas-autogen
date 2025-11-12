@@ -217,6 +217,15 @@
                                         </div>
                                         <p class="text-xs text-slate-500 mt-1">Ulangi daftar prompt dari awal setelah selesai.</p>
                                     </div>
+
+                                    <!-- (BARU) Sinkronisasi Otomatis -->
+                                    <div id="list-auto-sync-container" class="pt-2 border-t border-slate-200">
+                                        <div class="flex items-center justify-between">
+                                            <label for="list-auto-sync" class="text-sm font-semibold text-slate-700">Sinkronisasi Otomatis</label>
+                                            <input type="checkbox" id="list-auto-sync" class="form-checkbox h-5 w-5 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500">
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-1">Muat ulang data dari G-Sheet saat batch diulang.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -374,6 +383,7 @@
             const listIntervalMin = document.getElementById('list-interval-min');
             const listIntervalMax = document.getElementById('list-interval-max');
             const listRepeat = document.getElementById('list-repeat');
+            const listAutoSync = document.getElementById('list-auto-sync'); // (BARU)
             // (BARU) DOM untuk Timer
             const listTotalTime = document.getElementById('list-total-time');
             const listCountdownTime = document.getElementById('list-countdown-time');
@@ -1181,288 +1191,252 @@
                     if (listRepeat.checked) {
                         currentBatchIndex = 0;
                         showMessage("Batch Selesai. Mengulang dari awal...", 'info');
+                        
+                        // (BARU) Logika Sinkronisasi Otomatis
+                        if (listAutoSync.checked) {
+                            showMessage("Sinkronisasi otomatis: Memuat data baru dari G-Sheet...", 'info');
+                            await fetchListPrompts(); // Muat ulang data
+                            if (fetchedListPrompts.length === 0) {
+                                showMessage("Sinkronisasi otomatis gagal atau daftar kosong. Menghentikan batch.", 'error');
+                                stopBatchGeneration();
+                                return;
+                            }
+                        }
                     } else {
                         showMessage("Batch selesai!", 'success');
+                        // (DITAMBAHKAN) Hentikan batch setelah selesai
                         stopBatchGeneration();
-                        listCurrentPrompt.textContent = 'Selesai';
-                        listCountdownTime.textContent = 'Selesai';
-                        return;
+                        return; // Keluar dari fungsi
                     }
                 }
-
-                // (BARU) Jadwalkan tugas berikutnya dengan countdown
-                const intervalSeconds = getIntervalTime();
-                const intervalMs = intervalSeconds * 1000;
                 
-                batchNextRunTime = Date.now() + intervalMs;
+                // (BARU) Logika Countdown dan Penjadwalan
+                if (batchTimeoutId) clearTimeout(batchTimeoutId);
                 if (batchCountdownTimerId) clearInterval(batchCountdownTimerId);
+                
+                const intervalSeconds = getIntervalTime();
+                batchNextRunTime = Date.now() + intervalSeconds * 1000;
 
-                // Mulai countdown timer UI
+                // Mulai timer countdown
+                let secondsRemaining = intervalSeconds;
+                listCountdownTime.textContent = `${secondsRemaining} detik`;
+                
                 batchCountdownTimerId = setInterval(() => {
-                    const remainingMs = batchNextRunTime - Date.now();
-                    if (remainingMs <= 0) {
+                    secondsRemaining--;
+                    listCountdownTime.textContent = `${secondsRemaining} detik`;
+                    if (secondsRemaining <= 0) {
                         clearInterval(batchCountdownTimerId);
-                        listCountdownTime.textContent = 'Memulai...';
-                    } else {
-                        listCountdownTime.textContent = `${Math.ceil(remainingMs / 1000)} detik`;
+                        batchCountdownTimerId = null;
                     }
                 }, 1000);
-                
-                // Set timeout untuk lari `runBatchTask` berikutnya
-                batchTimeoutId = setTimeout(runBatchTask, intervalMs);
-            }
 
+                // Jadwalkan tugas berikutnya
+                batchTimeoutId = setTimeout(runBatchTask, intervalSeconds * 1000);
 
-            function handleTemplateClick(e) {
-                e.preventDefault(); 
-                const templatePrompt = e.currentTarget.dataset.prompt;
-                const templateName = e.currentTarget.dataset.name;
-                if (!templatePrompt) return;
-                selectedTemplatePrompt = templatePrompt;
-                document.querySelectorAll('.template-btn').forEach(btn => {
-                    btn.classList.remove('bg-blue-500', 'text-white', 'border-blue-500');
-                    btn.classList.add('bg-slate-200', 'text-slate-800');
-                });
-                e.currentTarget.classList.add('bg-blue-500', 'text-white', 'border-blue-500');
-                e.currentTarget.classList.remove('bg-slate-200', 'text-slate-800');
-                generateBtn.disabled = false;
-                generateBtnText.textContent = 'Hasilkan Gambar';
-                showMessage(`Template '${templateName}' dipilih. Masukkan subjek di bawah.`, 'info');
-                inputs.single.focus();
-            }
-
-            function handleModeChange(e) {
-                currentMode = e.target.value;
-                
-                Object.values(panels).forEach(p => p.classList.add('hidden'));
-                optimizerContainer.classList.add('hidden');
-                styleReferenceContainer.classList.add('hidden');
-                subjectReferenceContainer.classList.add('hidden');
-                imageCountContainer.classList.add('hidden');
-                aspectRatioContainer.classList.add('hidden');
-
-                selectedTemplatePrompt = null;
-                document.querySelectorAll('.template-btn').forEach(btn => {
-                    btn.classList.remove('bg-blue-500', 'text-white', 'border-blue-500');
-                    btn.classList.add('bg-slate-200', 'text-slate-800');
-                });
-
-                if (isBatchRunning) {
-                    stopBatchGeneration(); 
-                }
-
-                switch (currentMode) {
-                    case 'single':
-                        panels.single.classList.remove('hidden');
-                        optimizerContainer.classList.remove('hidden');
-                        styleReferenceContainer.classList.remove('hidden');
-                        subjectReferenceContainer.classList.remove('hidden');
-                        imageCountContainer.classList.remove('hidden');
-                        aspectRatioContainer.classList.remove('hidden');
-                        
-                        panels.single.querySelector('label').textContent = 'Deskripsi Gambar';
-                        inputs.single.placeholder = 'Misalnya: Kucing berwarna emas sedang bermain di taman cyberpunk...';
-                        generateBtnText.textContent = 'Hasilkan Gambar';
-                        break;
-                    case 'template':
-                        panels.template.classList.remove('hidden');
-                        panels.single.classList.remove('hidden'); 
-                        subjectReferenceContainer.classList.remove('hidden'); 
-                        imageCountContainer.classList.remove('hidden');
-                        aspectRatioContainer.classList.remove('hidden');
-                        styleReferenceContainer.classList.add('hidden'); 
-
-                        panels.single.querySelector('label').textContent = 'Subjek (untuk Template)';
-                        inputs.single.placeholder = 'Masukkan subjek untuk template yang dipilih, mis: "Anjing golden retriever"';
-                        generateBtnText.textContent = 'Hasilkan Gambar';
-                        break;
-                    case 'list': 
-                        panels.list.classList.remove('hidden');
-                        
-                        imageCountContainer.classList.remove('hidden');
-                        aspectRatioContainer.classList.remove('hidden');
-                        styleReferenceContainer.classList.remove('hidden');
-
-                        panels.single.classList.add('hidden');
-                        optimizerContainer.classList.add('hidden');
-                        subjectReferenceContainer.classList.add('hidden'); 
-
-                        listTotalCount.textContent = fetchedListPrompts.length; 
-                        listCurrentPrompt.textContent = 'N/A';
-                        listCountdownTime.textContent = '--'; // (BARU) Reset timer
-                        listTotalTime.textContent = '00:00:00'; // (BARU) Reset timer
-                        generateBtnText.textContent = 'Mulai Batch';
-                        break;
-                }
-            }
-
-            function createPlaceholderCard(initialPrompt, index) {
-                const card = document.createElement('div');
-                card.className = "bg-white rounded-lg shadow-md overflow-hidden";
-                card.dataset.index = index;
-                card.dataset.prompt = initialPrompt; 
-                card.innerHTML = `
-                    <div class="aspect-square bg-slate-200 flex items-center justify-center relative">
-                        <div class="spinner"></div>
-                        <img src="/placeholder.svg" alt="Generated Image" class="hidden w-full h-full object-cover">
-                    </div>
-                    <div class="p-4">
-                        <p class="card-prompt text-sm text-slate-600 mb-3 line-clamp-3" title="${initialPrompt}">${initialPrompt}</p>
-                        <div class="flex justify-end gap-2 mt-2">
-                            <div class="relative group">
-                                <button class="download-single-btn p-2 rounded-full bg-green-500 hover:bg-green-600 text-white disabled:bg-gray-400 disabled:text-gray-200 transition-colors" disabled>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                </button>
-                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Unduh Gambar</span>
-                            </div>
-                            <div class="relative group">
-                                <button class="regenerate-btn p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:text-gray-400 transition-colors" disabled>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M2.5 22v-6h6"/><path d="M21.5 13a9.7 9.7 0 0 0-4.6-7.5l-2.5 2.5"/><path d="M2.5 11a9.7 9.7 0 0 1 4.6 7.5l2.5-2.5"/></svg>
-                                </button>
-                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Regenerate</span>
-                            </div>
-                            <div class="relative group">
-                                <button class="copy-prompt-btn p-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 disabled:text-gray-400 transition-colors" disabled>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                                </button>
-                                <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Salin Prompt</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                const imgElement = card.querySelector('img');
-                imgElement.addEventListener('click', () => { if (imgElement.src && !imgElement.classList.contains('hidden')) openPreview(imgElement.src); });
-                const downloadSingleBtn = card.querySelector('.download-single-btn');
-                downloadSingleBtn.addEventListener('click', () => {
-                    const base64 = card.dataset.base64;
-                    if (base64) {
-                        const index = card.dataset.index;
-                        downloadBase64File(base64, `gemini_image_${parseInt(index) + 1}.png`);
-                        showMessage(`Gambar ${parseInt(index) + 1} diunduh.`, 'success');
-                    }
-                });
-                card.querySelector('.regenerate-btn').addEventListener('click', async () => await handleRegenerate(card));
-                const copyBtn = card.querySelector('.copy-prompt-btn');
-                copyBtn.addEventListener('click', () => { const promptText = card.querySelector('.card-prompt').textContent; copyToClipboard(promptText); });
-                return card;
-            }
+            } // <-- (DITAMBAHKAN) Penutup untuk runBatchTask
 
             async function handleGenerateClick() {
-                if (isGenerating && currentMode !== 'list') return;
-
+                if (isGenerating) return;
+                
+                // (BARU) Logika Tombol Mode List
                 if (currentMode === 'list') {
                     if (isBatchRunning) {
                         stopBatchGeneration();
                     } else {
-                        await startBatchGeneration(); 
+                        await startBatchGeneration();
                     }
-                    return;
+                    return; // Selesai untuk mode list
+                }
+
+                let originalPrompt = '';
+                let imageCount = parseInt(document.getElementById('image-count').value, 10) || 1;
+                const aspectRatio = document.getElementById('select-aspect-ratio').value;
+                const subjectRefs = [...subjectReferenceBase64s];
+                const styleRefs = [...styleReferenceBase64s];
+
+                if (currentMode === 'single') {
+                    originalPrompt = inputs.single.value.trim();
+                    if (!originalPrompt) {
+                        showMessage("Silakan masukkan deskripsi gambar.", 'error');
+                        return;
+                    }
+                } else if (currentMode === 'template') {
+                    const subjectText = inputs.single.value.trim();
+                    if (!selectedTemplatePrompt) {
+                        showMessage("Silakan pilih template terlebih dahulu.", 'error');
+                        return;
+                    }
+                    // (MODIFIKASI) Izinkan jika ada Teks ATAU Gambar Subjek
+                    if (!subjectText && subjectRefs.length === 0) {
+                        showMessage("Silakan masukkan subjek atau unggah referensi subjek.", 'error');
+                        return;
+                    }
+                    // Ganti [SUBJECT] dengan teks subjek, atau hapus jika kosong
+                    originalPrompt = selectedTemplatePrompt.replace(/\[SUBJECT\]/gi, subjectText).trim();
                 }
 
                 isGenerating = true;
                 generateBtn.disabled = true;
-                generateIcon.classList.add('animate-spin');
-                generateBtnText.textContent = 'Sedang Memproses...';
-                
-                let originalPrompt = "";
-                const subject = inputs.single.value.trim(); 
+                generateBtnText.textContent = 'Menghasilkan...';
+                generateIcon.classList.add('animate-spin'); 
 
-                if (currentMode === 'single') {
-                    if (!subject) {
-                        showMessage("Silakan masukkan deskripsi gambar.", 'error');
-                        isGenerating = false;
-                        generateBtn.disabled = false;
-                        generateIcon.classList.remove('animate-spin');
-                        generateBtnText.textContent = 'Hasilkan Gambar';
-                        return;
-                    }
-                    originalPrompt = subject;
-                } else { // mode 'template'
-                    if (!selectedTemplatePrompt) {
-                        showMessage("Silakan pilih template dari daftar.", 'error');
-                        isGenerating = false;
-                        generateBtn.disabled = false;
-                        generateIcon.classList.remove('animate-spin');
-                        generateBtnText.textContent = 'Hasilkan Gambar';
-                        return;
-                    }
-                    if (!subject && subjectReferenceBase64s.length === 0) { 
-                        showMessage("Silakan masukkan subjek (teks) ATAU unggah referensi subjek (gambar) untuk template.", 'error');
-                        isGenerating = false;
-                        generateBtn.disabled = false;
-                        generateIcon.classList.remove('animate-spin');
-                        generateBtnText.textContent = 'Hasilkan Gambar';
-                        return;
-                    }
-                    originalPrompt = selectedTemplatePrompt.replace(/\[SUBJECT\]/gi, subject);
-                }
-                
-                const imageCount = parseInt(document.getElementById('image-count').value, 10) || 1;
-                const aspectRatio = document.getElementById('select-aspect-ratio').value;
-                
                 try {
-                    await processSinglePrompt(originalPrompt, imageCount, aspectRatio, subjectReferenceBase64s, styleReferenceBase64s);
-                } catch (err) {
-                    console.error("Error selama 'processSinglePrompt':", err);
-                    showMessage("Terjadi galat saat memproses.", "error");
+                    await processSinglePrompt(originalPrompt, imageCount, aspectRatio, subjectRefs, styleRefs);
+                } catch (error) {
+                    console.error("Terjadi galat:", error);
+                    showMessage("Terjadi galat yang tidak diketahui.", 'error');
                 } finally {
                     isGenerating = false;
                     generateBtn.disabled = false;
+                    generateBtnText.textContent = 'Hasilkan Gambar';
                     generateIcon.classList.remove('animate-spin');
+                }
+            }
+
+            function createPlaceholderCard(prompt, index) {
+                const card = document.createElement('div');
+                card.className = 'relative group bg-slate-100 rounded-lg shadow-md aspect-square flex items-center justify-center p-4 border border-slate-200 overflow-hidden';
+                card.dataset.index = index;
+                card.dataset.prompt = prompt; 
+
+                card.innerHTML = `
+                    <img src="" alt="Generated Image" class="absolute inset-0 w-full h-full object-cover rounded-lg hidden">
+                    <div class="spinner"></div>
+                    <!-- Overlay Keterangan -->
+                    <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent transition-opacity opacity-0 group-hover:opacity-100">
+                        <p class="card-prompt text-white text-xs font-medium line-clamp-3" title="${prompt}">${prompt}</p>
+                    </div>
+                    <!-- Tombol Aksi -->
+                    <div class="absolute top-3 right-3 flex flex-col gap-2 transition-opacity opacity-0 group-hover:opacity-100">
+                        <!-- Download -->
+                        <div class="relative group/btn">
+                            <button class="download-single-btn p-2 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg transition-colors disabled:bg-slate-400 active:scale-95" disabled title="Download Image">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            </button>
+                            <span class="absolute z-10 right-full top-1/2 -translate-y-1/2 mr-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Unduh</span>
+                        </div>
+                        <!-- Regenerate -->
+                        <div class="relative group/btn">
+                            <button class="regenerate-btn p-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-colors disabled:bg-slate-400 active:scale-95" disabled title="Regenerate">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.22c0-2.6-1.4-5-3.6-6.2.9-.3 1.9-.3 2.8 0l-4.4 4.4c-.9.9-2.3.9-3.2 0L9.4 7.2C8.5 6.3 7 6.3 6.1 7.2L1.7 11.6c-.9.9-.9 2.3 0 3.2l4.4 4.4c.9.9 2.3.9 3.2 0l1-1m5.2-1.9-4.4-4.4c-.9-.9-2.3-.9-3.2 0L7.2 13.3c-.9.9-.9 2.3 0 3.2l4.4 4.4c.9.9 2.3.9 3.2 0l4.4-4.4c.9-.9.9-2.3 0-3.2Z"/></svg>
+                            </button>
+                            <span class="absolute z-10 right-full top-1/2 -translate-y-1/2 mr-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Regenerate</span>
+                        </div>
+                        <!-- Copy Prompt -->
+                        <div class="relative group/btn">
+                            <button class="copy-prompt-btn p-2 rounded-full bg-slate-50 hover:bg-slate-200 text-slate-700 shadow-lg transition-colors disabled:bg-slate-400 active:scale-95" disabled title="Copy Prompt">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                            </button>
+                            <span class="absolute z-10 right-full top-1/2 -translate-y-1/2 mr-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Salin Prompt</span>
+                        </div>
+                    </div>
+                `;
+
+                // Tambahkan event listener di sini
+                card.querySelector('.download-single-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const base64 = card.dataset.base64;
+                    if (base64) {
+                        downloadBase64File(base64, `generated_image_${index}.png`);
+                        showMessage("Gambar diunduh.", 'success');
+                    }
+                });
+                card.querySelector('.regenerate-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleRegenerate(card);
+                });
+                card.querySelector('.copy-prompt-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    copyToClipboard(card.dataset.prompt);
+                });
+                card.querySelector('img').addEventListener('click', () => openPreview(card.dataset.base64));
+                return card;
+            }
+            
+            function handleModeChange() {
+                const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+                currentMode = selectedMode;
+
+                // Sembunyikan semua panel dulu
+                Object.values(panels).forEach(panel => panel.classList.add('hidden'));
+                
+                // (DIMODIFIKASI) Logika untuk menampilkan/menyembunyikan panel dan pengaturan
+                if (currentMode === 'single') {
+                    panels.single.classList.remove('hidden');
+                    // Tampilkan pengaturan yang relevan
+                    optimizerContainer.classList.remove('hidden');
+                    subjectReferenceContainer.classList.remove('hidden');
+                    styleReferenceContainer.classList.remove('hidden');
+                    imageCountContainer.classList.remove('hidden');
+                    aspectRatioContainer.classList.remove('hidden');
+                    // Sembunyikan pengaturan list
+                    panels.list.classList.add('hidden');
+                    
+                } else if (currentMode === 'template') {
+                    panels.single.classList.remove('hidden'); // Tetap tampilkan untuk input subjek
+                    panels.template.classList.remove('hidden');
+                    // Sembunyikan/Tampilkan pengaturan
+                    optimizerContainer.classList.add('hidden'); // Sembunyikan optimasi
+                    subjectReferenceContainer.classList.remove('hidden');
+                    styleReferenceContainer.classList.add('hidden'); // Sembunyikan ref gaya
+                    imageCountContainer.classList.remove('hidden');
+                    aspectRatioContainer.classList.remove('hidden');
+                    panels.list.classList.add('hidden');
+                
+                } else if (currentMode === 'list') {
+                    panels.list.classList.remove('hidden');
+                    // Sembunyikan input prompt single
+                    panels.single.classList.add('hidden');
+                    // Sembunyikan pengaturan yang tidak relevan
+                    optimizerContainer.classList.add('hidden');
+                    subjectReferenceContainer.classList.add('hidden');
+                    
+                    // (DIMODIFIKASI) Tampilkan pengaturan yang relevan untuk List
+                    styleReferenceContainer.classList.remove('hidden');
+                    imageCountContainer.classList.remove('hidden');
+                    aspectRatioContainer.classList.remove('hidden');
+                }
+                
+                // (BARU) Ubah teks tombol Generate untuk Mode List
+                if (currentMode === 'list') {
+                    generateBtnText.textContent = isBatchRunning ? 'Hentikan Batch' : 'Mulai Batch';
+                } else {
                     generateBtnText.textContent = 'Hasilkan Gambar';
                 }
             }
-
-            function loadListUrl() {
-                const savedUrl = localStorage.getItem(LIST_URL_KEY);
-                listSheetUrlInput.value = savedUrl || DEFAULT_LIST_EXAMPLE_URL;
+            
+            function handleTemplateClick(e) {
+                const btn = e.currentTarget;
+                selectedTemplatePrompt = btn.dataset.prompt;
+                // Update visual
+                document.querySelectorAll('.template-btn').forEach(b => b.classList.replace('bg-blue-500', 'bg-slate-200'));
+                btn.classList.replace('bg-slate-200', 'bg-blue-500');
+                
+                showMessage(`Template "${btn.dataset.name}" dipilih.`, 'info');
+                inputs.single.focus();
+                
+                // (DIHAPUS) Tidak perlu pindah mode lagi
             }
 
-            async function saveAndFetchListUrl() {
-                const url = listSheetUrlInput.value.trim();
-                if (!url) {
-                    showMessage("URL tidak boleh kosong.", "error");
-                    return;
-                }
-                localStorage.setItem(LIST_URL_KEY, url);
-                showMessage("URL Google Sheet disimpan!", "success");
-                await fetchListPrompts(); 
-            }
-
-            // === INISIALISASI EVENT LISTENERS ===
+            // === EVENT LISTENERS ===
+            
+            // Inisialisasi Mode
             modeRadios.forEach(radio => radio.addEventListener('change', handleModeChange));
-            
-            uploadSubject.addEventListener('change', (e) => handleImageUpload(e, subjectReferenceBase64s, subjectPreviewContainer, clearSubjectBtn));
-            clearSubjectBtn.addEventListener('click', () => clearImageReferences(subjectReferenceBase64s, uploadSubject, subjectPreviewContainer, clearSubjectBtn));
-            
-            uploadStyle.addEventListener('change', (e) => handleImageUpload(e, styleReferenceBase64s, stylePreviewContainer, clearStyleBtn));
-            clearStyleBtn.addEventListener('click', () => clearImageReferences(styleReferenceBase64s, uploadStyle, stylePreviewContainer, clearStyleBtn));
-            
-            canvasViewTitle.addEventListener('click', async () => await switchView('canvas'));
-            historyViewTitle.addEventListener('click', async () => await switchView('history'));
-            
-            closeModalBtn.addEventListener('click', closePreview);
-            downloadPreviewBtn.addEventListener('click', () => {
-                const imageUrl = previewModal.dataset.currentImageUrl;
-                if (imageUrl) {
-                    const timestamp = new Date().getTime();
-                    downloadBase64File(imageUrl, `preview_image_${timestamp}.png`);
-                    showMessage('Gambar preview berhasil diunduh.', 'success');
+            handleModeChange(); // Panggil saat memuat
+
+            // (BARU) Accordion Pengaturan System
+            systemAccordionBtn.addEventListener('click', () => {
+                const isHidden = systemAccordionContent.classList.contains('hidden');
+                if (isHidden) {
+                    systemAccordionContent.classList.remove('hidden');
+                    systemAccordionIcon.style.transform = 'rotate(180deg)';
                 } else {
-                    showMessage('Gambar tidak tersedia untuk diunduh.', 'error');
+                    systemAccordionContent.classList.add('hidden');
+                    systemAccordionIcon.style.transform = 'rotate(0deg)';
                 }
             });
-            previewModal.addEventListener('click', (e) => { if (e.target === previewModal) closePreview(); });
 
-            syncTemplatesBtn.addEventListener('click', fetchAndRenderTemplates);
-            syncListBtn.addEventListener('click', fetchListPrompts);
-            saveListUrlBtn.addEventListener('click', saveAndFetchListUrl); 
-
-            systemAccordionBtn.addEventListener('click', () => {
-                systemAccordionContent.classList.toggle('hidden');
-                systemAccordionIcon.classList.toggle('rotate-180');
-            });
-
+            // (BARU) Tipe Interval (Statis/Random)
             listIntervalType.addEventListener('change', (e) => {
                 if (e.target.value === 'random') {
                     listIntervalStaticContainer.classList.add('hidden');
@@ -1473,26 +1447,62 @@
                 }
             });
 
-
-            (async () => {
-                await fetchAndRenderTemplates(); 
-                loadListUrl(); 
-                await fetchListPrompts(); 
-            })();
-
+            // Referensi Subjek & Gaya
+            uploadSubject.addEventListener('change', (e) => handleImageUpload(e, subjectReferenceBase64s, subjectPreviewContainer, clearSubjectBtn));
+            clearSubjectBtn.addEventListener('click', () => clearImageReferences(subjectReferenceBase64s, uploadSubject, subjectPreviewContainer, clearSubjectBtn));
+            uploadStyle.addEventListener('change', (e) => handleImageUpload(e, styleReferenceBase64s, stylePreviewContainer, clearStyleBtn));
+            clearStyleBtn.addEventListener('click', () => clearImageReferences(styleReferenceBase64s, uploadStyle, stylePreviewContainer, clearStyleBtn));
+            
+            // Tombol Utama
             generateBtn.addEventListener('click', handleGenerateClick);
             downloadBtn.addEventListener('click', handleDownloadZip);
+
+            // Navigasi Tampilan (Canvas/History)
+            canvasViewTitle.addEventListener('click', () => switchView('canvas'));
+            historyViewTitle.addEventListener('click', () => switchView('history'));
             
-            getDB().then(() => {
-                console.log("Database riwayat berhasil diinisialisasi.");
-                handleModeChange({ target: { value: 'single' } }); 
-                switchView('canvas');
-            }).catch(err => {
-                console.error("Gagal inisialisasi database:", err);
-                showMessage("Gagal memuat database riwayat.", "error");
-                handleModeChange({ target: { value: 'single' } });
-                switchView('canvas');
+            // Modal Pratinjau
+            closeModalBtn.addEventListener('click', closePreview);
+            previewModal.addEventListener('click', (e) => { if (e.target === previewModal) closePreview(); });
+            downloadPreviewBtn.addEventListener('click', () => {
+                const imageUrl = previewModal.dataset.currentImageUrl;
+                if (imageUrl) {
+                    downloadBase64File(imageUrl, `preview_image_${new Date().getTime()}.png`);
+                    showMessage("Gambar diunduh.", 'success');
+                }
             });
+
+            // (DIMODIFIKASI) Logika Mode Template & List
+            syncTemplatesBtn.addEventListener('click', fetchAndRenderTemplates);
+            
+            // (BARU) Logika Mode List
+            const savedListUrl = localStorage.getItem(LIST_URL_KEY);
+            if (savedListUrl) {
+                listSheetUrlInput.value = savedListUrl;
+            }
+            saveListUrlBtn.addEventListener('click', () => {
+                const url = listSheetUrlInput.value.trim();
+                if (url) {
+                    localStorage.setItem(LIST_URL_KEY, url);
+                    showMessage("URL Google Sheet disimpan!", 'success');
+                    fetchListPrompts(); // Otomatis sinkronisasi setelah menyimpan
+                }
+            });
+            syncListBtn.addEventListener('click', fetchListPrompts);
+            
+            // === INISIALISASI ===
+            getDB().then(() => {
+                console.log("Koneksi IndexedDB berhasil.");
+                if (currentView === 'history') {
+                    switchView('history'); 
+                }
+            }).catch(err => {
+                console.error("Inisialisasi IndexedDB gagal:", err);
+                showMessage("Gagal memuat database riwayat.", 'error');
+            });
+            
+            fetchAndRenderTemplates(); // Muat template saat halaman dibuka
+            fetchListPrompts(); // Muat daftar list saat halaman dibuka (jika URL tersimpan)
         });
     </script>
 </body>
