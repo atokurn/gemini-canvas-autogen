@@ -8,6 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- JSZip untuk export ZIP -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Font dan Styling Kustom -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@600;700&display=swap');
@@ -77,7 +81,7 @@
                 <header class="mb-6 pb-4 border-b-2 border-slate-200">
                     <div class="flex items-center gap-3 mb-2">
                         <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-white text-lg font-bold">
-                            ✨
+                            <i data-lucide="sparkles" class="w-6 h-6"></i>
                         </div>
                         <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">Canvas AI</h1>
                     </div>
@@ -109,15 +113,12 @@
                     
                     <!-- Template Mode -->
                     <div id="panel-template" class="hidden">
-                        <label class="text-sm font-semibold text-slate-700 mb-2 block">Pilih Template Gaya (Multi-Select)</label>
-                        <div class="flex items-center justify-between mb-3">
-                            <p class="text-xs text-slate-500">Klik Kategori untuk memilih semua.</p>
-                            <!-- (BARU) Tombol Sinkronisasi -->
-                            <button id="sync-templates-btn" class="p-1.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors" title="Sinkronisasi Template">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.22c0-2.6-1.4-5-3.6-6.2.9-.3 1.9-.3 2.8 0l-4.4 4.4c-.9.9-2.3.9-3.2 0L9.4 7.2C8.5 6.3 7 6.3 6.1 7.2L1.7 11.6c-.9.9-.9 2.3 0 3.2l4.4 4.4c.9.9 2.3.9 3.2 0l1-1m5.2-1.9-4.4-4.4c-.9-.9-2.3-.9-3.2 0L7.2 13.3c-.9.9-.9 2.3 0 3.2l4.4 4.4c.9.9 2.3.9 3.2 0l4.4-4.4c.9-.9.9-2.3 0-3.2Z"/></svg>
-                            </button>
+                        <label class="text-sm font-semibold text-slate-700 mb-2 block">Template Gaya Terpilih</label>
+                        <div id="selected-templates" class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3"></div>
+                        <div class="flex justify-between items-center">
+                            <span id="selected-templates-count" class="text-xs text-slate-600">0 template dipilih</span>
+                            <button id="open-template-modal" class="text-xs py-1.5 px-3 rounded-md font-semibold bg-blue-600 text-white hover:bg-blue-700">Pilih Template</button>
                         </div>
-                        <div id="template-buttons" class="grid grid-cols-2 gap-2"></div>
                     </div>
                     
                     <!-- (DIMODIFIKASI BESAR) Panel Mode List -->
@@ -171,13 +172,13 @@
                                 <!-- Tombol Accordion -->
                                 <button id="system-accordion-btn" class="w-full flex justify-between items-center p-3 text-sm font-semibold text-slate-700">
                                     <span>Pengaturan System</span>
-                                    <svg id="system-accordion-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-200"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                </button>
+                                <i id="system-accordion-icon" data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200"></i>
+                            </button>
                                 <!-- Konten Accordion -->
                                 <div id="system-accordion-content" class="hidden p-3 border-t border-slate-200 space-y-4">
                                     <!-- Pengaturan Interval (Statis/Random) -->
                                     <div>
-                                        <label for="list-interval-type" class="text-xs font-medium text-slate-700 block mb-2">Tipe Interval</label>
+                                        <label for="list-interval-type" class="text-xs font-medium text-slate-700 block mb-2" title="Atur jeda antar prompt: Statis (detik) atau Random (detik).">Tipe Interval</label>
                                         <select id="list-interval-type" class="w-full p-2 border border-slate-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
                                             <option value="static">Statis (detik)</option>
                                             <option value="random">Random (detik)</option>
@@ -185,17 +186,17 @@
                                     </div>
                                     <!-- Interval Statis -->
                                     <div id="list-interval-static-container">
-                                        <label for="list-interval-time" class="text-xs font-medium text-slate-700 block mb-2">Interval Statis (detik)</label>
+                                        <label for="list-interval-time" class="text-xs font-medium text-slate-700 block mb-2" title="Detik jeda antar prompt saat tipe Statis.">Interval Statis (detik)</label>
                                         <input type="number" id="list-interval-time" value="5" min="1" class="w-full p-2 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
                                     </div>
                                     <!-- Interval Random -->
                                     <div id="list-interval-random-container" class="hidden flex gap-2">
                                         <div class="flex-1">
-                                            <label for="list-interval-min" class="text-xs font-medium text-slate-700 block mb-2">Min (detik)</label>
+                                            <label for="list-interval-min" class="text-xs font-medium text-slate-700 block mb-2" title="Batas minimum jeda (detik) untuk tipe Random.">Min (detik)</label>
                                             <input type="number" id="list-interval-min" value="5" min="1" class="w-full p-2 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
                                         </div>
                                         <div class="flex-1">
-                                            <label for="list-interval-max" class="text-xs font-medium text-slate-700 block mb-2">Max (detik)</label>
+                                            <label for="list-interval-max" class="text-xs font-medium text-slate-700 block mb-2" title="Batas maksimum jeda (detik) untuk tipe Random.">Max (detik)</label>
                                             <input type="number" id="list-interval-max" value="30" min="1" class="w-full p-2 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
                                         </div>
                                     </div>
@@ -203,28 +204,37 @@
                                     <!-- Unduh Otomatis -->
                                     <div class="pt-2 border-t border-slate-200">
                                         <div class="flex items-center justify-between">
-                                            <label for="list-auto-download" class="text-sm font-semibold text-slate-700">Unduh Otomatis</label>
+                                            <label for="list-auto-download" class="text-sm font-semibold text-slate-700" title="Otomatis mengunduh setiap gambar setelah selesai dibuat.">Unduh Otomatis</label>
                                             <input type="checkbox" id="list-auto-download" class="form-checkbox h-5 w-5 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500">
                                         </div>
-                                        <p class="text-xs text-slate-500 mt-1">Unduh setiap gambar secara otomatis setelah selesai.</p>
                                     </div>
                                     
                                     <!-- (BARU) Pengulangan -->
                                     <div class="pt-2 border-t border-slate-200">
                                         <div class="flex items-center justify-between">
-                                            <label for="list-repeat" class="text-sm font-semibold text-slate-700">Ulangi Batch</label>
+                                            <label for="list-repeat" class="text-sm font-semibold text-slate-700" title="Mengulangi daftar prompt dari awal setelah selesai.">Ulangi Batch</label>
                                             <input type="checkbox" id="list-repeat" class="form-checkbox h-5 w-5 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500">
                                         </div>
-                                        <p class="text-xs text-slate-500 mt-1">Ulangi daftar prompt dari awal setelah selesai.</p>
+                                        <div class="mt-2 flex items-center gap-2">
+                                            <label for="list-repeat-count" class="text-xs font-medium text-slate-700" title="Jumlah pengulangan batch; 0 = tanpa batas.">Jumlah Pengulangan</label>
+                                            <input type="number" id="list-repeat-count" value="0" min="0" class="w-24 p-1.5 border border-slate-300 rounded-md text-center text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" title="0 = tanpa batas (unlimited). Jika > 0, batch mengulang sesuai jumlah." />
+                                        </div>
                                     </div>
 
                                     <!-- (BARU) Sinkronisasi Otomatis -->
                                     <div id="list-auto-sync-container" class="pt-2 border-t border-slate-200">
                                         <div class="flex items-center justify-between">
-                                            <label for="list-auto-sync" class="text-sm font-semibold text-slate-700">Sinkronisasi Otomatis</label>
+                                            <label for="list-auto-sync" class="text-sm font-semibold text-slate-700" title="Saat batch diulang, muat ulang data dari G‑Sheet.">Sinkronisasi Otomatis</label>
                                             <input type="checkbox" id="list-auto-sync" class="form-checkbox h-5 w-5 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500">
                                         </div>
-                                        <p class="text-xs text-slate-500 mt-1">Muat ulang data dari G-Sheet saat batch diulang.</p>
+                                    </div>
+                                    
+                                    <!-- (BARU) Nonaktifkan Riwayat untuk Mode List -->
+                                    <div class="pt-2 border-t border-slate-200">
+                                        <div class="flex items-center justify-between">
+                                            <label for="list-disable-history" class="text-sm font-semibold text-slate-700" title="Jika aktif, hasil Mode List tidak disimpan ke riwayat.">Nonaktifkan Riwayat (Mode List)</label>
+                                            <input type="checkbox" id="list-disable-history" class="form-checkbox h-5 w-5 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -270,6 +280,7 @@
                         <div id="subject-preview-container" class="hidden mt-2 flex flex-wrap gap-2"></div>
                         <button id="clear-subject" class="hidden text-xs text-red-500 hover:text-red-700 mt-2 w-full text-center font-medium">Hapus</button>
                         <p class="text-xs text-slate-500 mt-2">Gunakan untuk mempertahankan bentuk objek utama</p>
+                        
                     </div>
 
                     <!-- (DIKEMBALIKAN) Container Referensi Gaya -->
@@ -294,7 +305,7 @@
                 </div>
 
                 <button id="generate-btn" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 active:scale-95">
-                    <svg id="generate-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9 1.9 5.8 1.9-5.8 5.8-1.9-5.8-1.9z"/></svg>
+                    <i id="generate-icon" data-lucide="sparkles" class="w-5 h-5"></i>
                     <span id="generate-btn-text">Hasilkan Gambar</span>
                 </button>
                 <!-- (MOVED) Message box was here -->
@@ -309,8 +320,12 @@
                     <h2 id="history-view-title" class="text-2xl font-medium text-slate-400 cursor-pointer pb-2 transition-colors hover:text-slate-600">Riwayat</h2>
                 </div>
                 <button id="download-btn" class="hidden bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-2 px-5 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 active:scale-95">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+                    <i data-lucide="download" class="w-4 h-4"></i>
                     Download All (ZIP)
+                </button>
+                <button id="clear-history-btn" class="hidden bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-semibold py-2 px-5 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 active:scale-95" title="Hapus semua riwayat">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    Hapus Riwayat
                 </button>
             </header>
 
@@ -328,14 +343,138 @@
             <div class="absolute top-4 right-4 flex gap-2 z-10">
                 <!-- Download Button (New) -->
                 <button id="download-preview-btn" class="p-2 rounded-full bg-black/50 hover:bg-green-600 text-white hover:shadow-lg transition-all duration-200 active:scale-95" title="Download Image">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <i data-lucide="download" class="w-6 h-6"></i>
                 </button>
                 <!-- Close Button (Improved) -->
                 <button id="close-modal-btn" class="p-2 rounded-full bg-black/50 hover:bg-red-600 text-white hover:shadow-lg transition-all duration-200 active:scale-95" title="Close Preview">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
+            <!-- Carousel controls -->
+            <button id="preview-prev-btn" class="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white z-10">
+                <i data-lucide="chevron-left" class="w-6 h-6"></i>
+            </button>
+            <button id="preview-next-btn" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white z-10">
+                <i data-lucide="chevron-right" class="w-6 h-6"></i>
+            </button>
             <img id="modal-image" src="/placeholder.svg" alt="Pratinjau" class="w-full h-auto object-contain max-h-[85vh] rounded-lg">
+            <div id="preview-counter" class="absolute bottom-3 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-black/50 text-white text-xs z-10">1 / 1</div>
+        </div>
+    </div>
+
+    <!-- (BARU) Modal Crop Referensi Subjek -->
+    <div id="crop-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Header -->
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-slate-800">Edit Crop Referensi Subjek</h3>
+                <div class="flex items-center gap-2">
+                    <label for="crop-aspect" class="text-xs font-medium text-slate-700">Rasio</label>
+                    <select id="crop-aspect" class="p-1.5 border border-slate-300 rounded-md text-xs bg-white">
+                        <option value="free">Bebas</option>
+                        <option value="1:1">1:1</option>
+                        <option value="4:3">4:3</option>
+                        <option value="3:4">3:4</option>
+                        <option value="16:9">16:9</option>
+                        <option value="9:16">9:16</option>
+                        <option value="3:2">3:2</option>
+                        <option value="2:3">2:3</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Body (scrollable) -->
+            <div class="px-4 py-4 overflow-y-auto">
+                <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_16rem] gap-4">
+                    <!-- Body kiri: kanvas gambar -->
+                    <div class="min-w-0">
+                        <div class="relative border border-slate-200 rounded-md overflow-hidden bg-slate-50">
+                            <canvas id="crop-canvas" class="w-full h-auto block"></canvas>
+                        </div>
+                    </div>
+                    <!-- Body kanan: preview -->
+                    <div class="hidden md:block">
+                        <p class="text-xs font-medium text-slate-700 mb-1">Preview</p>
+                        <div class="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
+                            <canvas id="crop-preview" class="w-full h-auto block"></canvas>
+                        </div>
+                        <div class="mt-3 flex items-center gap-2">
+                            <button id="crop-undo" class="px-2 py-1 text-xs rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">Undo</button>
+                            <button id="crop-redo" class="px-2 py-1 text-xs rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">Redo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Footer -->
+            <div class="px-4 py-3 border-t border-slate-200 flex items-center justify-between gap-3">
+                <p id="crop-info" class="text-[11px] text-slate-600">Ukuran: — × — px • Rasio: Bebas</p>
+                <div class="flex justify-end gap-2">
+                    <button id="crop-cancel" class="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">Batal</button>
+                    <button id="crop-apply" class="px-3 py-1.5 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">Simpan Crop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- (BARU) Modal Pemilihan Template Gaya -->
+    <div id="template-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+                <div class="flex items-center gap-2 w-full">
+                    <button id="close-template-modal" class="p-2 rounded-md bg-slate-100 hover:bg-slate-200" title="Tutup">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                    <button id="template-view-toggle" class="p-2 rounded-md bg-slate-100 hover:bg-slate-200" title="Ubah tampilan Grid/List">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                    </button>
+                    <div class="flex-1 relative">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2"></i>
+                        <input id="template-search" type="text" class="w-full pl-8 p-2 border border-slate-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" placeholder="Cari nama, deskripsi, kategori, atau isi prompt...">
+                    </div>
+                    <select id="template-category-filter" class="p-2 border border-slate-300 rounded-md text-xs bg-white">
+                        <option value="">Semua Kategori</option>
+                    </select>
+                    <button id="template-search-clear" class="text-xs py-1.5 px-3 rounded-md font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300">Reset</button>
+                    <button id="sync-templates-btn" class="p-1.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors" title="Sinkronisasi Template">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Body: ukuran tetap dengan scroll vertikal otomatis -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[550px] overflow-hidden px-2">
+                <!-- Kiri: daftar scrollable -->
+                <div class="lg:col-span-2 p-4 lg:border-r border-slate-200 h-full min-h-0">
+                    <!-- Ukuran fixed: width 500px (pada layar besar) dan height 400px, scroll vertikal otomatis -->
+                    <div id="template-left-scroll" class="w-full lg:w-[500px] h-full overflow-y-auto overscroll-contain scroll-smooth p-2 pb-4 box-border">
+                        <div id="template-buttons" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+                    </div>
+                </div>
+                <!-- Kanan: preview besar (disembunyikan di mobile) -->
+                <div class="p-4 h-full min-h-0 hidden lg:block" aria-hidden="true">
+                    <div id="template-right-scroll" class="h-full overflow-y-auto overscroll-contain scroll-smooth p-2 pb-4 box-border">
+                        <div class="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
+                            <img id="template-preview-image" src="https://placehold.co/480x320/94a3b8/ffffff?text=Preview" class="w-full h-auto object-cover" alt="Preview">
+                        </div>
+                        <div class="mt-3">
+                            <h3 id="template-preview-title" class="text-sm font-semibold text-slate-800">Tidak ada template terpilih</h3>
+                            <p id="template-preview-desc" class="text-xs text-slate-600">Pilih salah satu template di kiri untuk melihat detail prompt.</p>
+                            <pre id="template-preview-prompt" class="mt-2 p-2 bg-slate-100 rounded text-[11px] text-slate-700 whitespace-pre-wrap"></pre>
+                        </div>
+                    </div>
+                    <!-- Hapus tombol selesai dari body; pindah ke footer -->
+                </div>
+            </div>
+            <!-- Footer menyatu dengan body, tetap terlihat saat body discroll -->
+            <div id="template-modal-footer" class="px-4 py-2 flex items-center justify-between gap-3 bg-white">
+                <div class="text-xs text-slate-600 flex items-center gap-4">
+                    <span id="template-total-info">Total: 0 template</span>
+                    <span id="template-selected-info">Dipilih: 0 template</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="template-deselect-all" class="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">Deselect</button>
+                    <button id="close-template-modal-bottom" class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">Selesai</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -346,6 +485,37 @@
             const API_URL_TEXT_GEN = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
             const API_URL_IMAGE_GEN = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
             const API_URL_IMAGE_EDIT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${API_KEY}`; 
+
+            // === KONFIGURASI SUPABASE UNTUK LOGGING PROMPT ===
+            // Isi kredensial Supabase Anda di sini
+            const SUPABASE_URL = "https://lwpqpzvfnsuptpebhpst.supabase.co"; // contoh: https://xxxx.supabase.co
+            const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cHFwenZmbnN1cHRwZWJocHN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MjUyNzksImV4cCI6MjA3ODUwMTI3OX0.07abBKd3iPeCs3X3cfBomQauLvQHya1onQMQ8DsI_rU"; // contoh: eyJhbGciOi...
+            const SUPABASE_TABLE = "prompt_logs"; // nama tabel untuk menyimpan log
+
+            let supabaseClient = null;
+            try {
+                if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+                    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                }
+            } catch (_) { /* sengaja diam */ }
+
+            // Helper: kirim log ke Supabase secara silent (tanpa UI notifikasi)
+            async function logPromptToSupabase(mode, prompt) {
+                try {
+                    if (!supabaseClient) return; // Tidak terkonfigurasi → no-op
+                    const data = { waktu: new Date().toISOString(), mode_input: mode, prompt };
+                    const { error } = await supabaseClient.from(SUPABASE_TABLE).insert([data]);
+                    if (error) {
+                        // Diamkan error agar tidak mengganggu UX
+                        // console.debug('Supabase log error:', error);
+                    }
+                } catch (_) { /* sengaja diam */ }
+            }
+
+            // Inisialisasi ikon Lucide untuk seluruh dokumen
+            if (window.lucide && typeof lucide.createIcons === 'function') {
+                lucide.createIcons();
+            }
 
             // === (BARU) KONSTANTA APLIKASI ===
             const LIST_URL_KEY = 'geminiCanvasListUrl';
@@ -363,7 +533,26 @@
                 single: document.getElementById('prompt-single'),
             };
             const templateButtonsContainer = document.getElementById('template-buttons');
+            const templateLeftScroll = document.getElementById('template-left-scroll');
+            const templateRightScroll = document.getElementById('template-right-scroll');
             const syncTemplatesBtn = document.getElementById('sync-templates-btn');
+            const templateSearchInput = document.getElementById('template-search');
+            const templateSearchClearBtn = document.getElementById('template-search-clear');
+            const templateCategoryFilter = document.getElementById('template-category-filter');
+            const templateModal = document.getElementById('template-modal');
+            const openTemplateModalBtn = document.getElementById('open-template-modal');
+            const closeTemplateModalBtn = document.getElementById('close-template-modal');
+            const closeTemplateModalBottom = document.getElementById('close-template-modal-bottom');
+            const templateViewToggle = document.getElementById('template-view-toggle');
+            const selectedTemplatesContainer = document.getElementById('selected-templates');
+            const selectedTemplatesCount = document.getElementById('selected-templates-count');
+            const templateTotalInfo = document.getElementById('template-total-info');
+            const templateSelectedInfo = document.getElementById('template-selected-info');
+            const templatePreviewImage = document.getElementById('template-preview-image');
+            const templatePreviewTitle = document.getElementById('template-preview-title');
+            const templatePreviewDesc = document.getElementById('template-preview-desc');
+            const templatePreviewPrompt = document.getElementById('template-preview-prompt');
+            const templateDeselectAllBtn = document.getElementById('template-deselect-all');
             
             // (DIMODIFIKASI) DOM Referensi untuk Panel List
             const listSheetUrlInput = document.getElementById('list-sheet-url'); // (BARU)
@@ -383,7 +572,9 @@
             const listIntervalMin = document.getElementById('list-interval-min');
             const listIntervalMax = document.getElementById('list-interval-max');
             const listRepeat = document.getElementById('list-repeat');
+            const listRepeatCountInput = document.getElementById('list-repeat-count');
             const listAutoSync = document.getElementById('list-auto-sync'); // (BARU)
+            const listDisableHistory = document.getElementById('list-disable-history');
             // (BARU) DOM untuk Timer
             const listTotalTime = document.getElementById('list-total-time');
             const listCountdownTime = document.getElementById('list-countdown-time');
@@ -412,6 +603,7 @@
             const generateBtnText = document.getElementById('generate-btn-text');
             const generateIcon = document.getElementById('generate-icon');
             const downloadBtn = document.getElementById('download-btn');
+            const clearHistoryBtn = document.getElementById('clear-history-btn');
             const outputGrid = document.getElementById('output-grid');
             const messageBox = document.getElementById('message-box');
 
@@ -423,6 +615,20 @@
             const modalImage = document.getElementById('modal-image');
             const closeModalBtn = document.getElementById('close-modal-btn');
             const downloadPreviewBtn = document.getElementById('download-preview-btn');
+            const previewPrevBtn = document.getElementById('preview-prev-btn');
+            const previewNextBtn = document.getElementById('preview-next-btn');
+            const previewCounter = document.getElementById('preview-counter');
+
+            // (BARU) Referensi DOM untuk Cropper
+            const cropModal = document.getElementById('crop-modal');
+            const cropCanvas = document.getElementById('crop-canvas');
+            const cropPreview = document.getElementById('crop-preview');
+            const cropAspect = document.getElementById('crop-aspect');
+            const cropUndoBtn = document.getElementById('crop-undo');
+            const cropRedoBtn = document.getElementById('crop-redo');
+            const cropApplyBtn = document.getElementById('crop-apply');
+            const cropCancelBtn = document.getElementById('crop-cancel');
+            const cropInfo = document.getElementById('crop-info');
 
             let currentView = 'canvas'; 
 
@@ -430,21 +636,32 @@
             let currentMode = 'single';
             let styleReferenceBase64s = []; 
             let subjectReferenceBase64s = []; 
+            let subjectOriginalDataUrls = []; // simpan original untuk edit ulang
             let generatedImages = [];
             let isGenerating = false;
             // (DIMODIFIKASI) Diubah menjadi array untuk multi-select
             let selectedTemplatePrompts = []; 
             let fetchedTemplates = []; 
             let fetchedListPrompts = []; // (BARU) State terpisah untuk Mode List
+            let templateViewMode = 'grid'; // 'grid' | 'list'
 
             // (DIMODIFIKASI) State untuk Mode List
             let isBatchRunning = false;
             let currentBatchIndex = 0;
             let batchTimeoutId = null;
+            // State untuk carousel preview
+            let previewSequence = [];
+            let previewIndexPos = 0;
+            let previewKeydownHandler = null;
+            let previewTouchStartX = null;
+            let previewTouchStartY = null;
             let batchStartTime = 0; // (BARU)
             let batchTotalTimerId = null; // (BARU)
             let batchNextRunTime = 0; // (BARU)
             let batchCountdownTimerId = null; // (BARU)
+            // (BARU) State pengulangan batch
+            let listRepeatCounter = 0;
+            let listRepeatLimit = 0; // 0 = unlimited
 
             // === LOGIKA INDEXEDDB UNTUK HISTORY ===
             
@@ -515,6 +732,27 @@
                 } catch (error) {
                     console.error("Error dalam loadHistory:", error);
                     return [];
+                }
+            }
+
+            async function clearHistory() {
+                try {
+                    const dbInstance = await getDB();
+                    const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    const request = store.clear();
+                    await new Promise((resolve, reject) => {
+                        request.onsuccess = resolve;
+                        request.onerror = (e) => {
+                            console.error("Gagal menghapus IndexedDB:", e.target.error);
+                            reject(e.target.error);
+                        };
+                    });
+                    showMessage("Riwayat berhasil dihapus.", 'success');
+                    await renderHistory();
+                } catch (error) {
+                    console.error("Error dalam clearHistory:", error);
+                    showMessage("Gagal menghapus riwayat.", 'error');
                 }
             }
 
@@ -621,6 +859,514 @@
                 URL.revokeObjectURL(link.href);
             }
 
+            // =====================
+            // (BARU) CROP UTILITIES
+            // =====================
+            const MIN_CROP_SIZE = 64;
+            const MAX_CROP_SIZE_FACTOR = 0.98; // maksimum 98% dari sisi kanvas
+            const HANDLE_SIZE_BASE = 8;
+            const HANDLE_SIZE_MOBILE = 14;
+            let cropImageEl = new Image();
+            let cropCtx = null;
+            let previewCtx = null;
+            let cropRect = { x: 0, y: 0, w: 100, h: 100 };
+            let dragState = { mode: null, startX: 0, startY: 0, startRect: null, handle: null };
+            let cropHistory = [];
+            let cropRedo = [];
+            let currentCropIndex = null; // index saat edit, null untuk baru
+            let currentSourceDataURL = null; // sumber asli untuk cropping
+
+            function aspectToRatio(value) {
+                if (!value || value === 'free') return null;
+                const [a, b] = value.split(':').map(Number);
+                if (!a || !b) return null;
+                return a / b;
+            }
+
+            function pushCropHistory() {
+                cropHistory.push({ ...cropRect });
+                if (cropHistory.length > 100) cropHistory.shift();
+                cropRedo.length = 0;
+                updateUndoRedoButtons();
+            }
+
+            function updateUndoRedoButtons() {
+                if (cropUndoBtn) cropUndoBtn.disabled = cropHistory.length <= 1;
+                if (cropRedoBtn) cropRedoBtn.disabled = cropRedo.length === 0;
+            }
+
+            function undoCrop() {
+                if (cropHistory.length > 1) {
+                    const last = cropHistory.pop();
+                    cropRedo.push(last);
+                    const prev = cropHistory[cropHistory.length - 1];
+                    cropRect = { ...prev };
+                    drawCrop();
+                    updateUndoRedoButtons();
+                }
+            }
+
+            function redoCrop() {
+                if (cropRedo.length > 0) {
+                    const next = cropRedo.pop();
+                    cropHistory.push({ ...next });
+                    cropRect = { ...next };
+                    drawCrop();
+                    updateUndoRedoButtons();
+                }
+            }
+
+            function initCanvasForImage() {
+                const containerW = cropCanvas.parentElement.clientWidth || 800;
+                const aspect = cropImageEl.width / cropImageEl.height;
+                const canvasW = Math.max(320, Math.min(containerW, 1000));
+                const canvasH = Math.round(canvasW / aspect);
+                cropCanvas.width = canvasW;
+                cropCanvas.height = canvasH;
+                cropCtx = cropCanvas.getContext('2d');
+
+                cropPreview.width = Math.min(512, canvasW);
+                cropPreview.height = Math.min(512, Math.round(cropPreview.width / (aspectToRatio(cropAspect.value) || 1) || cropPreview.width));
+                previewCtx = cropPreview.getContext('2d');
+            }
+
+            function centerDefaultCrop() {
+                const ratio = aspectToRatio(cropAspect.value);
+                const W = cropCanvas.width;
+                const H = cropCanvas.height;
+                if (!ratio) {
+                    // Mode Bebas: default menjangkau seluruh gambar
+                    cropRect.x = 0;
+                    cropRect.y = 0;
+                    cropRect.w = W;
+                    cropRect.h = H;
+                } else {
+                    // Mode rasio tertentu: gunakan ~60% dan pusatkan
+                    let w = Math.round(W * 0.6);
+                    let h = Math.round(H * 0.6);
+                    // sesuaikan w/h ke ratio tanpa melampaui canvas
+                    if (w / h > ratio) {
+                        w = Math.round(h * ratio);
+                    } else {
+                        h = Math.round(w / ratio);
+                    }
+                    w = Math.max(MIN_CROP_SIZE, Math.min(W - 10, w));
+                    h = Math.max(MIN_CROP_SIZE, Math.min(H - 10, h));
+                    cropRect.w = w;
+                    cropRect.h = h;
+                    cropRect.x = Math.round((W - w) / 2);
+                    cropRect.y = Math.round((H - h) / 2);
+                }
+            }
+
+            function getHandleSize() {
+                const coarse = (navigator.maxTouchPoints > 0) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+                return coarse ? HANDLE_SIZE_MOBILE : HANDLE_SIZE_BASE;
+            }
+
+            function drawCrop() {
+                // gambar image
+                cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+                cropCtx.drawImage(cropImageEl, 0, 0, cropCanvas.width, cropCanvas.height);
+                // overlay gelap di luar area crop (gunakan evenodd agar bagian dalam tetap asli)
+                cropCtx.save();
+                cropCtx.fillStyle = 'rgba(0,0,0,0.45)';
+                cropCtx.beginPath();
+                cropCtx.rect(0, 0, cropCanvas.width, cropCanvas.height);
+                cropCtx.rect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+                cropCtx.fill('evenodd');
+                cropCtx.restore();
+                // border crop
+                cropCtx.save();
+                cropCtx.strokeStyle = '#38bdf8';
+                cropCtx.lineWidth = 2;
+                cropCtx.setLineDash([6, 4]);
+                cropCtx.strokeRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+                cropCtx.restore();
+                // handles (lebih besar di mobile)
+                const hs = getHandleSize();
+                cropCtx.fillStyle = '#2563eb';
+                const handles = getHandles();
+                handles.forEach(h => cropCtx.fillRect(h.x - hs/2, h.y - hs/2, hs, hs));
+                // preview
+                updatePreview();
+                updateCropInfo();
+            }
+
+            function getHandles() {
+                const x = cropRect.x, y = cropRect.y, w = cropRect.w, h = cropRect.h;
+                return [
+                    { name: 'tl', x, y },
+                    { name: 'tr', x: x + w, y },
+                    { name: 'bl', x, y: y + h },
+                    { name: 'br', x: x + w, y: y + h },
+                    { name: 'tm', x: x + w/2, y },
+                    { name: 'bm', x: x + w/2, y: y + h },
+                    { name: 'ml', x, y: y + h/2 },
+                    { name: 'mr', x: x + w, y: y + h/2 },
+                ];
+            }
+
+            function hitTestHandle(mx, my) {
+                const hs = getHandleSize();
+                const handles = getHandles();
+                for (const h of handles) {
+                    if (Math.abs(mx - h.x) <= hs && Math.abs(my - h.y) <= hs) return h.name;
+                }
+                return null;
+            }
+
+            function clampRectToCanvas(rect, ratio = null, handle = null) {
+                const W = cropCanvas.width;
+                const H = cropCanvas.height;
+                const maxW = Math.floor(W * MAX_CROP_SIZE_FACTOR);
+                const maxH = Math.floor(H * MAX_CROP_SIZE_FACTOR);
+                // batas ukuran
+                rect.w = Math.max(MIN_CROP_SIZE, Math.min(rect.w, maxW));
+                rect.h = Math.max(MIN_CROP_SIZE, Math.min(rect.h, maxH));
+                if (ratio) {
+                    // jaga rasio terhadap perubahan lebar
+                    rect.h = Math.round(rect.w / ratio);
+                }
+                // jaga posisi dalam kanvas
+                if (rect.x < 0) rect.x = 0;
+                if (rect.y < 0) rect.y = 0;
+                if (rect.x + rect.w > W) {
+                    if (handle && (handle.includes('r') || handle === 'tr' || handle === 'br' || handle === 'mr')) {
+                        rect.w = W - rect.x;
+                        if (ratio) rect.h = Math.round(rect.w / ratio);
+                    } else {
+                        rect.x = W - rect.w;
+                    }
+                }
+                if (rect.y + rect.h > H) {
+                    if (handle && (handle.includes('b') || handle === 'bl' || handle === 'br' || handle === 'bm')) {
+                        rect.h = H - rect.y;
+                        if (ratio) rect.w = Math.round(rect.h * ratio);
+                    } else {
+                        rect.y = H - rect.h;
+                    }
+                }
+                // pastikan masih dalam batas setelah penyesuaian rasio
+                rect.x = Math.max(0, Math.min(W - rect.w, rect.x));
+                rect.y = Math.max(0, Math.min(H - rect.h, rect.y));
+            }
+
+            function onMouseDown(e) {
+                const r = cropCanvas.getBoundingClientRect();
+                const mx = e.clientX - r.left;
+                const my = e.clientY - r.top;
+                const handle = hitTestHandle(mx, my);
+                dragState.startX = mx;
+                dragState.startY = my;
+                dragState.startRect = { ...cropRect };
+                if (handle) {
+                    dragState.mode = 'resize';
+                    dragState.handle = handle;
+                } else if (mx >= cropRect.x && mx <= cropRect.x + cropRect.w && my >= cropRect.y && my <= cropRect.y + cropRect.h) {
+                    dragState.mode = 'move';
+                } else {
+                    dragState.mode = null;
+                }
+            }
+
+            function onMouseMove(e) {
+                if (!dragState.mode) return;
+                const r = cropCanvas.getBoundingClientRect();
+                const mx = e.clientX - r.left;
+                const my = e.clientY - r.top;
+                const dx = mx - dragState.startX;
+                const dy = my - dragState.startY;
+                const ratio = aspectToRatio(cropAspect.value);
+                let rect = { ...dragState.startRect };
+                if (dragState.mode === 'move') {
+                    rect.x += dx;
+                    rect.y += dy;
+                } else if (dragState.mode === 'resize') {
+                    switch (dragState.handle) {
+                        case 'tl':
+                            rect.x += dx; rect.y += dy; rect.w -= dx; rect.h -= dy; break;
+                        case 'tr':
+                            rect.y += dy; rect.w += dx; rect.h -= dy; break;
+                        case 'bl':
+                            rect.x += dx; rect.w -= dx; rect.h += dy; break;
+                        case 'br':
+                            rect.w += dx; rect.h += dy; break;
+                        case 'tm':
+                            rect.y += dy; rect.h -= dy; break;
+                        case 'bm':
+                            rect.h += dy; break;
+                        case 'ml':
+                            rect.x += dx; rect.w -= dx; break;
+                        case 'mr':
+                            rect.w += dx; break;
+                    }
+                    if (ratio) {
+                        // kunci rasio saat resize - sesuaikan tinggi terhadap lebar
+                        rect.h = Math.round(rect.w / ratio);
+                        if (dragState.handle === 'tl' || dragState.handle === 'tr' || dragState.handle === 'tm') {
+                            rect.y = dragState.startRect.y + (dragState.startRect.h - rect.h);
+                        }
+                        if (dragState.handle === 'tl' || dragState.handle === 'bl' || dragState.handle === 'ml') {
+                            rect.x = dragState.startRect.x + (dragState.startRect.w - rect.w);
+                        }
+                    }
+                }
+                clampRectToCanvas(rect, ratio, dragState.handle);
+                cropRect = rect;
+                drawCrop();
+            }
+
+            function onMouseUp() {
+                if (!dragState.mode) return;
+                dragState.mode = null;
+                pushCropHistory();
+            }
+
+            function updateCropInfo() {
+                if (!cropInfo) return;
+                const ratio = aspectToRatio(cropAspect.value);
+                const w = Math.round(cropRect.w);
+                const h = Math.round(cropRect.h);
+                const ratioText = ratio ? `${Math.round(ratio * 100) / 100}:1` : 'Bebas';
+                cropInfo.textContent = `Ukuran: ${w}×${h} px • Rasio: ${ratioText}`;
+            }
+
+            // Touch support (drag + pinch-to-zoom)
+            function getTouchPos(e, index = 0) {
+                const r = cropCanvas.getBoundingClientRect();
+                const t = e.touches[index] || e.changedTouches[index];
+                return { x: t.clientX - r.left, y: t.clientY - r.top };
+            }
+
+            function distance(a, b) { const dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx*dx + dy*dy); }
+            function midPoint(a, b) { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
+
+            function onTouchStart(e) {
+                if (e.touches.length === 1) {
+                    const p = getTouchPos(e, 0);
+                    const handle = hitTestHandle(p.x, p.y);
+                    dragState.startX = p.x;
+                    dragState.startY = p.y;
+                    dragState.startRect = { ...cropRect };
+                    if (handle) { dragState.mode = 'resize'; dragState.handle = handle; }
+                    else if (p.x >= cropRect.x && p.x <= cropRect.x + cropRect.w && p.y >= cropRect.y && p.y <= cropRect.y + cropRect.h) {
+                        dragState.mode = 'move';
+                    } else { dragState.mode = null; }
+                } else if (e.touches.length === 2) {
+                    const p0 = getTouchPos(e, 0);
+                    const p1 = getTouchPos(e, 1);
+                    dragState.mode = 'pinch';
+                    dragState.startDist = distance(p0, p1);
+                    dragState.center = midPoint(p0, p1);
+                    dragState.startRect = { ...cropRect };
+                }
+            }
+
+            function onTouchMove(e) {
+                if (!dragState.mode) return;
+                e.preventDefault();
+                const ratio = aspectToRatio(cropAspect.value);
+                let rect = { ...dragState.startRect };
+                if (dragState.mode === 'move' && e.touches.length === 1) {
+                    const p = getTouchPos(e, 0);
+                    const dx = p.x - dragState.startX;
+                    const dy = p.y - dragState.startY;
+                    rect.x += dx; rect.y += dy;
+                } else if (dragState.mode === 'resize' && e.touches.length === 1) {
+                    const p = getTouchPos(e, 0);
+                    const dx = p.x - dragState.startX;
+                    const dy = p.y - dragState.startY;
+                    switch (dragState.handle) {
+                        case 'tl': rect.x += dx; rect.y += dy; rect.w -= dx; rect.h -= dy; break;
+                        case 'tr': rect.y += dy; rect.w += dx; rect.h -= dy; break;
+                        case 'bl': rect.x += dx; rect.w -= dx; rect.h += dy; break;
+                        case 'br': rect.w += dx; rect.h += dy; break;
+                        case 'tm': rect.y += dy; rect.h -= dy; break;
+                        case 'bm': rect.h += dy; break;
+                        case 'ml': rect.x += dx; rect.w -= dx; break;
+                        case 'mr': rect.w += dx; break;
+                    }
+                    if (ratio) {
+                        rect.h = Math.round(rect.w / ratio);
+                        if (dragState.handle === 'tl' || dragState.handle === 'tr' || dragState.handle === 'tm') {
+                            rect.y = dragState.startRect.y + (dragState.startRect.h - rect.h);
+                        }
+                        if (dragState.handle === 'tl' || dragState.handle === 'bl' || dragState.handle === 'ml') {
+                            rect.x = dragState.startRect.x + (dragState.startRect.w - rect.w);
+                        }
+                    }
+                } else if (dragState.mode === 'pinch' && e.touches.length === 2) {
+                    const p0 = getTouchPos(e, 0);
+                    const p1 = getTouchPos(e, 1);
+                    const dist = distance(p0, p1);
+                    const scale = dist / dragState.startDist;
+                    const start = dragState.startRect;
+                    let newW = Math.max(MIN_CROP_SIZE, start.w * scale);
+                    let newH = ratio ? Math.round(newW / ratio) : Math.max(MIN_CROP_SIZE, start.h * scale);
+                    const center = dragState.center;
+                    rect.w = newW; rect.h = newH;
+                    rect.x = center.x - rect.w / 2;
+                    rect.y = center.y - rect.h / 2;
+                }
+                clampRectToCanvas(rect, ratio, dragState.handle);
+                cropRect = rect;
+                drawCrop();
+            }
+
+            function onTouchEnd() {
+                if (!dragState.mode) return;
+                dragState.mode = null;
+                pushCropHistory();
+            }
+
+            function updatePreview() {
+                previewCtx.clearRect(0, 0, cropPreview.width, cropPreview.height);
+                const sx = cropRect.x * (cropImageEl.width / cropCanvas.width);
+                const sy = cropRect.y * (cropImageEl.height / cropCanvas.height);
+                const sw = cropRect.w * (cropImageEl.width / cropCanvas.width);
+                const sh = cropRect.h * (cropImageEl.height / cropCanvas.height);
+                const temp = document.createElement('canvas');
+                temp.width = Math.max(1, Math.round(sw));
+                temp.height = Math.max(1, Math.round(sh));
+                const tctx = temp.getContext('2d');
+                tctx.drawImage(cropImageEl, sx, sy, sw, sh, 0, 0, temp.width, temp.height);
+                // Scale ke preview canvas preserving aspect
+                const scaleW = cropPreview.width;
+                const scaleH = Math.round((temp.height / temp.width) * scaleW);
+                cropPreview.height = scaleH;
+                previewCtx.drawImage(temp, 0, 0, scaleW, scaleH);
+            }
+
+            function openCropper(dataURL, index = null) {
+                currentCropIndex = index;
+                currentSourceDataURL = dataURL;
+                cropImageEl.onload = () => {
+                    initCanvasForImage();
+                    centerDefaultCrop();
+                    cropHistory = [{ ...cropRect }];
+                    cropRedo = [];
+                    updateUndoRedoButtons();
+                    drawCrop();
+                };
+                cropImageEl.src = dataURL;
+                cropModal.classList.remove('hidden');
+            }
+
+            function closeCropper() {
+                cropModal.classList.add('hidden');
+                currentSourceDataURL = null;
+                currentCropIndex = null;
+            }
+
+            function applyCrop() {
+                if (cropRect.w < MIN_CROP_SIZE || cropRect.h < MIN_CROP_SIZE) {
+                    showMessage('Ukuran crop terlalu kecil. Minimal 64×64 px.', 'error');
+                    return;
+                }
+                const sx = cropRect.x * (cropImageEl.width / cropCanvas.width);
+                const sy = cropRect.y * (cropImageEl.height / cropCanvas.height);
+                const sw = cropRect.w * (cropImageEl.width / cropCanvas.width);
+                const sh = cropRect.h * (cropImageEl.height / cropCanvas.height);
+                const out = document.createElement('canvas');
+                out.width = Math.max(1, Math.round(sw));
+                out.height = Math.max(1, Math.round(sh));
+                const octx = out.getContext('2d');
+                octx.drawImage(cropImageEl, sx, sy, sw, sh, 0, 0, out.width, out.height);
+                const dataUrl = out.toDataURL('image/png');
+                const base64Part = dataUrl.split(',')[1];
+
+                if (currentCropIndex == null) {
+                    subjectReferenceBase64s.push(base64Part);
+                    subjectOriginalDataUrls.push(currentSourceDataURL);
+                    appendSubjectPreview(subjectReferenceBase64s.length - 1, dataUrl);
+                } else {
+                    subjectReferenceBase64s[currentCropIndex] = base64Part;
+                    updateSubjectPreview(currentCropIndex, dataUrl);
+                }
+                lucide.createIcons && lucide.createIcons();
+                closeCropper();
+                clearSubjectBtn.classList.remove('hidden');
+                subjectPreviewContainer.classList.remove('hidden');
+            }
+
+            function appendSubjectPreview(index, dataUrl) {
+                const item = document.createElement('div');
+                item.className = 'relative';
+                item.dataset.index = String(index);
+                const img = document.createElement('img');
+                img.src = dataUrl;
+                img.className = 'w-22 h-22 object-cover rounded-md border-2 border-slate-300';
+                const btn = document.createElement('button');
+                btn.className = 'absolute top-1 right-1 p-1 rounded bg-black/60 text-white hover:bg-blue-600';
+                btn.title = 'Edit Crop';
+                btn.innerHTML = '<i data-lucide="crop" class="w-3.5 h-3.5"></i>';
+                btn.addEventListener('click', () => {
+                    const original = subjectOriginalDataUrls[index] || ('data:image/png;base64,' + subjectReferenceBase64s[index]);
+                    openCropper(original, index);
+                });
+                item.appendChild(img);
+                item.appendChild(btn);
+                subjectPreviewContainer.appendChild(item);
+            }
+
+            function updateSubjectPreview(index, dataUrl) {
+                const item = subjectPreviewContainer.querySelector(`[data-index="${index}"]`);
+                if (item) {
+                    const img = item.querySelector('img');
+                    if (img) img.src = dataUrl;
+                }
+            }
+
+            function handleSubjectUploadWithCrop(event) {
+                const files = event.target.files;
+                if (!files || files.length === 0) return;
+                // jika user mengupload lagi, reset jika ingin mulai baru
+                // namun agar intuitif, kita tambahkan di bawah
+                const arrFiles = Array.from(files);
+                let idx = 0;
+                function next() {
+                    if (idx >= arrFiles.length) return;
+                    const file = arrFiles[idx++];
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const dataUrl = e.target.result;
+                        openCropper(dataUrl, null);
+                        // setelah applyCrop dipanggil, lanjut ke file berikutnya via event listener sementara
+                        const onAppliedOnce = () => {
+                            cropApplyBtn.removeEventListener('click', onAppliedOnce);
+                            next();
+                        }
+                        cropApplyBtn.addEventListener('click', onAppliedOnce);
+                    };
+                    reader.readAsDataURL(file);
+                }
+                subjectPreviewContainer.classList.remove('hidden');
+                clearSubjectBtn.classList.remove('hidden');
+                next();
+            }
+
+            // Event untuk cropper
+            if (cropCanvas) {
+                cropCanvas.addEventListener('mousedown', onMouseDown);
+                cropCanvas.addEventListener('touchstart', onTouchStart, { passive: false });
+                cropCanvas.addEventListener('touchmove', onTouchMove, { passive: false });
+                cropCanvas.addEventListener('touchend', onTouchEnd);
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onMouseUp);
+            }
+            if (cropAspect) {
+                cropAspect.addEventListener('change', () => {
+                    centerDefaultCrop();
+                    pushCropHistory();
+                    drawCrop();
+                });
+            }
+            if (cropUndoBtn) cropUndoBtn.addEventListener('click', undoCrop);
+            if (cropRedoBtn) cropRedoBtn.addEventListener('click', redoCrop);
+            if (cropCancelBtn) cropCancelBtn.addEventListener('click', closeCropper);
+            if (cropApplyBtn) cropApplyBtn.addEventListener('click', applyCrop);
+
             function handleImageUpload(event, base64Array, previewContainer, clearButton) {
                 const files = event.target.files;
                 if (!files) return;
@@ -638,7 +1384,7 @@
                             base64Array.push(base64String.split(',')[1]);
                             const img = document.createElement('img');
                             img.src = base64String;
-                            img.className = 'w-12 h-12 object-cover rounded-md border-2 border-slate-300';
+                            img.className = 'w-16 h-16 object-cover rounded-md border-2 border-slate-300';
                             previewContainer.appendChild(img);
                         };
                         reader.readAsDataURL(file);
@@ -652,6 +1398,16 @@
                 previewContainer.innerHTML = '';
                 previewContainer.classList.add('hidden');
                 clearButton.classList.add('hidden');
+            }
+
+            // (BARU) Khusus subjek: bersihkan juga sumber asli dan indeks dataset
+            function clearSubjectReferences() {
+                subjectReferenceBase64s.length = 0;
+                subjectOriginalDataUrls.length = 0;
+                uploadSubject.value = '';
+                subjectPreviewContainer.innerHTML = '';
+                subjectPreviewContainer.classList.add('hidden');
+                clearSubjectBtn.classList.add('hidden');
             }
             
             async function renderHistory() {
@@ -673,14 +1429,14 @@
                         </div>
                         <div class="flex sm:flex-col justify-end gap-2 mt-3 sm:mt-0 sm:ml-4">
                             <div class="relative group">
-                                <button data-base64="${item.base64}" data-index="${item.id.substring(0, 8)}" class="history-download-btn p-2 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <button data-base64="${item.base64}" data-index="${item.id.substring(0, 8)}" class="history-download-btn p-2 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
                                 </button>
                                 <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Unduh</span>
                             </div>
                             <div class="relative group">
                                 <button class="history-copy-prompt-btn p-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
                                 </button>
                                 <span class="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Salin Prompt</span>
                             </div>
@@ -698,6 +1454,10 @@
                         showMessage(`Gambar riwayat ${id} diunduh.`, 'success');
                     });
                 });
+                // Pastikan ikon Lucide dirender setelah elemen riwayat ditambahkan
+                if (window.lucide && typeof lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
             }
 
             async function switchView(view) {
@@ -711,6 +1471,8 @@
                     historyViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-medium');
                     // Periksa gambar yang valid
                     if (generatedImages.some(img => img && img.base64)) downloadBtn.classList.remove('hidden'); else downloadBtn.classList.add('hidden');
+                    // Sembunyikan tombol hapus riwayat di Canvas
+                    clearHistoryBtn.classList.add('hidden');
                 
                 } else { // 'history'
                     await renderHistory(); // Muat riwayat saat beralih
@@ -721,21 +1483,126 @@
                     canvasViewTitle.classList.remove('border-b-3', 'border-blue-500', 'font-bold', 'text-slate-900');
                     canvasViewTitle.classList.add('text-slate-400', 'hover:text-slate-600', 'font-medium');
                     downloadBtn.classList.add('hidden'); // Sembunyikan download zip di riwayat
+                    clearHistoryBtn.classList.remove('hidden');
                 }
             }
 
-            function openPreview(imageUrl) {
-                if (imageUrl) {
-                    modalImage.src = imageUrl;
-                    previewModal.classList.remove('hidden');
-                    previewModal.dataset.currentImageUrl = imageUrl;
+            function buildPreviewSequence() {
+                previewSequence = [];
+                for (let i = 0; i < generatedImages.length; i++) {
+                    const gi = generatedImages[i];
+                    if (gi && gi.base64) previewSequence.push(i);
                 }
+            }
+
+            function updatePreviewDisplay() {
+                const total = previewSequence.length;
+                if (total === 0) return;
+                const idx = previewSequence[previewIndexPos];
+                const current = generatedImages[idx];
+                if (current && current.base64) {
+                    modalImage.src = current.base64;
+                    previewModal.dataset.currentImageUrl = current.base64;
+                }
+                if (previewCounter) {
+                    previewCounter.textContent = `${previewIndexPos + 1} / ${total}`;
+                    previewCounter.classList.toggle('hidden', total <= 1);
+                }
+                if (previewPrevBtn && previewNextBtn) {
+                    const hideControls = total <= 1;
+                    previewPrevBtn.classList.toggle('hidden', hideControls);
+                    previewNextBtn.classList.toggle('hidden', hideControls);
+                }
+            }
+
+            function showPrevPreview() {
+                if (previewSequence.length <= 1) return;
+                previewIndexPos = (previewIndexPos - 1 + previewSequence.length) % previewSequence.length;
+                updatePreviewDisplay();
+            }
+
+            function showNextPreview() {
+                if (previewSequence.length <= 1) return;
+                previewIndexPos = (previewIndexPos + 1) % previewSequence.length;
+                updatePreviewDisplay();
+            }
+
+            function onPreviewKeydown(e) {
+                if (previewModal.classList.contains('hidden')) return;
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    showPrevPreview();
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    showNextPreview();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closePreview();
+                }
+            }
+
+            function onPreviewTouchStart(e) {
+                const t = e.changedTouches && e.changedTouches[0];
+                if (!t) return;
+                previewTouchStartX = t.clientX;
+                previewTouchStartY = t.clientY;
+            }
+
+            function onPreviewTouchEnd(e) {
+                const t = e.changedTouches && e.changedTouches[0];
+                if (!t || previewTouchStartX === null || previewTouchStartY === null) return;
+                const dx = t.clientX - previewTouchStartX;
+                const dy = t.clientY - previewTouchStartY;
+                // Deteksi swipe horizontal dominan
+                if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
+                    if (dx < 0) showNextPreview(); else showPrevPreview();
+                }
+                previewTouchStartX = null;
+                previewTouchStartY = null;
+            }
+
+            function openPreview(imageUrl) {
+                if (!imageUrl) return;
+                // Bangun urutan carousel dari generatedImages yang valid
+                buildPreviewSequence();
+                // Cari posisi berdasarkan imageUrl; fallback ke 0 jika tidak ditemukan
+                let pos = 0;
+                for (let j = 0; j < previewSequence.length; j++) {
+                    const gi = generatedImages[previewSequence[j]];
+                    if (gi && gi.base64 === imageUrl) { pos = j; break; }
+                }
+                previewIndexPos = pos;
+                previewModal.classList.remove('hidden');
+                updatePreviewDisplay();
+
+                // Wire controls
+                if (previewPrevBtn) previewPrevBtn.onclick = showPrevPreview;
+                if (previewNextBtn) previewNextBtn.onclick = showNextPreview;
+
+                // Keyboard navigation
+                previewKeydownHandler = onPreviewKeydown;
+                document.addEventListener('keydown', previewKeydownHandler);
+
+                // Swipe navigation on touch devices
+                try {
+                    modalImage.addEventListener('touchstart', onPreviewTouchStart, { passive: true });
+                    modalImage.addEventListener('touchend', onPreviewTouchEnd, { passive: true });
+                } catch (_) { /* no-op */ }
             }
 
             function closePreview() {
                 previewModal.classList.add('hidden');
                 modalImage.src = '';
                 previewModal.dataset.currentImageUrl = '';
+                // Bersihkan handlers
+                if (previewKeydownHandler) {
+                    document.removeEventListener('keydown', previewKeydownHandler);
+                    previewKeydownHandler = null;
+                }
+                try {
+                    modalImage.removeEventListener('touchstart', onPreviewTouchStart);
+                    modalImage.removeEventListener('touchend', onPreviewTouchEnd);
+                } catch (_) { /* no-op */ }
             }
 
             async function handleDownloadZip() {
@@ -780,6 +1647,44 @@
             }
 
             // === FUNGSI INTI ===
+            // Util bantu: ekstrak ID file Google Drive dari berbagai format URL
+            function extractDriveId(url) {
+                if (!url) return '';
+                try {
+                    const u = new URL(url);
+                    // Terima domain terkait Drive
+                    const hostOk = ['drive.google.com', 'docs.google.com'].some(h => u.hostname.includes(h));
+                    if (!hostOk) return '';
+                    let id = u.searchParams.get('id');
+                    if (id) return id;
+                    // /file/d/<id>/view
+                    const parts = u.pathname.split('/').filter(Boolean);
+                    const dIdx = parts.indexOf('d');
+                    if (dIdx !== -1 && parts[dIdx + 1]) return parts[dIdx + 1];
+                    // /thumbnail?id=<id>
+                    const thumbId = u.searchParams.get('id');
+                    if (thumbId) return thumbId;
+                    return '';
+                } catch (_) {
+                    return '';
+                }
+            }
+
+            // Buat URL gambar Drive (view)
+            function driveImageUrl(id) {
+                return id ? `https://drive.google.com/uc?export=view&id=${id}` : '';
+            }
+
+            // Buat URL thumbnail Drive yang stabil
+            function driveThumbUrl(id, size = 150) {
+                return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w${size}` : '';
+            }
+
+            // Normalisasi umum: jika URL dari Drive, gunakan uc?export=view; jika bukan, kembalikan apa adanya
+            function normalizeDriveUrl(url) {
+                const id = extractDriveId(url);
+                return id ? driveImageUrl(id) : (url || '');
+            }
             
             async function fetchAndRenderTemplates() {
                 showMessage("Memuat template dari Google Sheet...", 'info');
@@ -802,12 +1707,15 @@
                             else field += char;
                         }
                         values.push(field.trim().replace(/^"|"$/g, ''));
-                        
+
+                        // Skema kolom: Kategori, Nama, Deskripsi, Prompt, Thumbnail (opsional)
                         if (values.length >= 3) {
-                            if (values.length >= 4) {
-                                return { category: values[0] || "Lainnya", name: values[1], description: values[2], prompt: values[3] };
+                            if (values.length >= 5) {
+                                return { category: values[0] || 'Lainnya', name: values[1], description: values[2], prompt: values[3], thumbnail: normalizeDriveUrl(values[4]) };
+                            } else if (values.length >= 4) {
+                                return { category: values[0] || 'Lainnya', name: values[1], description: values[2], prompt: values[3], thumbnail: '' };
                             } else {
-                                return { category: "Lainnya", name: values[0], description: values[1], prompt: values[2] };
+                                return { category: 'Lainnya', name: values[0], description: values[1], prompt: values[2], thumbnail: '' };
                             }
                         }
                         return null;
@@ -815,12 +1723,15 @@
 
                     fetchedTemplates = templates; 
                     showMessage(`Berhasil memuat ${templates.length} template.`, 'success');
-                    renderTemplateButtons(templates); 
+                    renderTemplateButtons(templates, templateSearchInput ? (templateSearchInput.value || '') : '', templateCategoryFilter ? templateCategoryFilter.value : ''); 
+                    updateCategoryFilterOptions(templates);
+                    updateSelectedTemplateCount();
                 } catch (error) {
                     console.error("Gagal memuat template:", error);
                     showMessage("Gagal memuat template. Menggunakan daftar kosong.", 'error');
                     fetchedTemplates = [];
                     renderTemplateButtons([]);
+                    updateCategoryFilterOptions([]);
                 }
             }
 
@@ -934,9 +1845,20 @@
             }
 
 
-            function renderTemplateButtons(templates) {
+            function renderTemplateButtons(templates, query = '', categoryFilter = '') {
                 templateButtonsContainer.innerHTML = '';
-                const groupedTemplates = templates.reduce((acc, template) => {
+                const normalizedQuery = (query || '').trim().toLowerCase();
+                let sourceTemplates = normalizedQuery
+                    ? templates.filter(t => {
+                        const fields = [t.name, t.description, t.category, t.prompt].filter(Boolean).map(v => v.toLowerCase());
+                        return fields.some(v => v.includes(normalizedQuery));
+                    })
+                    : templates;
+                if (categoryFilter && categoryFilter.trim() !== '') {
+                    sourceTemplates = sourceTemplates.filter(t => (t.category || 'Lainnya') === categoryFilter);
+                }
+
+                const groupedTemplates = sourceTemplates.reduce((acc, template) => {
                     const category = template.category || 'Lainnya';
                     if (!acc[category]) acc[category] = [];
                     acc[category].push(template);
@@ -945,7 +1867,7 @@
                 for (const category in groupedTemplates) {
                     const header = document.createElement('h3');
                     // (DIMODIFIKASI) Tambahkan kelas untuk klik kategori
-                    header.className = 'text-xs font-semibold text-slate-500 uppercase tracking-wide col-span-2 mt-4 first:mt-0 cursor-pointer hover:text-blue-600';
+                    header.className = 'text-xs font-semibold text-slate-500 uppercase tracking-wide col-span-2 sm:col-span-3 lg:col-span-4 mt-4 first:mt-0 cursor-pointer hover:text-blue-600';
                     header.textContent = category;
                     header.dataset.category = category; // (BARU) Tambahkan data-category
                     header.addEventListener('click', handleCategoryClick); // (BARU) Tambahkan event listener
@@ -953,19 +1875,210 @@
 
                     groupedTemplates[category].forEach((template) => {
                         const button = document.createElement('button');
-                        // (DIMODIFIKASI) Tambahkan text-slate-800 untuk reset
-                        button.className = 'template-btn bg-slate-200 hover:bg-blue-100 text-slate-800 p-3 rounded-lg text-sm font-medium transition-colors text-left border border-slate-300';
-                        button.innerHTML = `<span class="font-bold">${template.name}</span><p class="text-xs text-slate-600 mt-1">${template.description}</p>`;
+                        const placeholderText = encodeURIComponent((template.name || 'T').slice(0, 10));
+                        let thumbUrl = '';
+                        if (template.thumbnail && template.thumbnail.trim()) {
+                            const id = extractDriveId(template.thumbnail.trim());
+                            // Pilih ukuran thumbnail sesuai mode
+                            const size = templateViewMode === 'list' ? 64 : 150;
+                            thumbUrl = id ? driveThumbUrl(id, size) : normalizeDriveUrl(template.thumbnail.trim());
+                        } else {
+                            thumbUrl = templateViewMode === 'list'
+                                ? `https://placehold.co/64x64/93c5fd/ffffff?text=${placeholderText}`
+                                : `https://placehold.co/150x150/93c5fd/ffffff?text=${placeholderText}`;
+                        }
+
+                        if (templateViewMode === 'list') {
+                            // Mode list: kecil + nama
+                            button.className = 'template-btn flex items-center gap-3 p-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 ring-2 ring-transparent transition-colors';
+                            const thumb = document.createElement('img');
+                            thumb.src = thumbUrl;
+                            thumb.referrerPolicy = 'no-referrer';
+                            thumb.alt = template.name || 'Template';
+                            thumb.className = 'w-9 h-9 object-cover rounded-md border border-slate-300';
+                            const title = document.createElement('span');
+                            title.className = 'text-sm font-medium text-slate-800 truncate';
+                            title.textContent = template.name || 'Template';
+                            button.appendChild(thumb);
+                            button.appendChild(title);
+                        } else {
+                            // Mode grid: thumbnail-only 150x150
+                            button.className = 'template-btn p-2 rounded-md bg-white hover:bg-slate-50 border border-slate-200 ring-2 ring-transparent transition-colors';
+                            const thumb = document.createElement('img');
+                            thumb.src = thumbUrl;
+                            thumb.referrerPolicy = 'no-referrer';
+                            thumb.alt = template.name || 'Template';
+                            thumb.className = 'w-[150px] h-[150px] object-cover rounded-sm';
+                            button.appendChild(thumb);
+                        }
+
                         button.dataset.prompt = template.prompt;
                         button.dataset.name = template.name; 
                         button.dataset.category = category; // (BARU) Tambahkan data-category
                         button.addEventListener('click', handleTemplateClick);
+                        button.addEventListener('mouseover', () => updateTemplatePreview(template));
+
+                        // Pertahankan state terpilih saat re-render
+                        if (selectedTemplatePrompts.includes(template.prompt)) {
+                            button.classList.add('ring-blue-500');
+                            button.classList.remove('ring-transparent');
+                            button.classList.remove('border-slate-200');
+                            button.classList.add('border-blue-400');
+                        }
                         templateButtonsContainer.appendChild(button);
                     });
                 }
-                if (templates.length === 0) {
+                if (sourceTemplates.length === 0) {
                      templateButtonsContainer.innerHTML = '<p class="text-xs text-slate-500 col-span-2">Tidak ada template yang dapat dimuat.</p>';
                 }
+
+                if (templateTotalInfo) templateTotalInfo.textContent = `Total: ${sourceTemplates.length} template`;
+
+                // Render ikon lucide bila ada di panel
+                if (window.lucide && typeof lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
+
+                applyTemplateViewMode();
+            }
+
+            function updateTemplatePreview(template) {
+                if (!template) return;
+                const placeholderText = encodeURIComponent((template.name || 'Template').slice(0, 20));
+                let previewUrl = '';
+                if (template.thumbnail && template.thumbnail.trim()) {
+                    const id = extractDriveId(template.thumbnail.trim());
+                    // Pakai thumbnail yang lebih besar agar cepat dan stabil
+                    previewUrl = id ? driveThumbUrl(id, 480) : normalizeDriveUrl(template.thumbnail.trim());
+                } else {
+                    previewUrl = `https://placehold.co/480x320/64748b/ffffff?text=${placeholderText}`;
+                }
+                if (templatePreviewImage) {
+                    templatePreviewImage.referrerPolicy = 'no-referrer';
+                    templatePreviewImage.src = previewUrl;
+                }
+                if (templatePreviewTitle) templatePreviewTitle.textContent = template.name || 'Template';
+                if (templatePreviewDesc) templatePreviewDesc.textContent = template.description || '';
+                if (templatePreviewPrompt) templatePreviewPrompt.textContent = template.prompt || '';
+            }
+
+            function updateCategoryFilterOptions(templates) {
+                if (!templateCategoryFilter) return;
+                const categories = Array.from(new Set((templates || []).map(t => t.category || 'Lainnya'))).sort();
+                // Reset, keep 'Semua Kategori'
+                templateCategoryFilter.innerHTML = '<option value="">Semua Kategori</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+            }
+
+            function renderSelectedTemplatesList() {
+                if (!selectedTemplatesContainer) return;
+                selectedTemplatesContainer.innerHTML = '';
+                const selected = fetchedTemplates.filter(t => selectedTemplatePrompts.includes(t.prompt));
+                selected.forEach(t => {
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between gap-2 p-2 border border-slate-200 rounded-md bg-white';
+                    const title = document.createElement('div');
+                    title.className = 'text-xs font-semibold text-slate-800 truncate';
+                    title.textContent = t.name || 'Template';
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'p-1 rounded-md bg-slate-100 hover:bg-slate-200';
+                    removeBtn.innerHTML = '<i data-lucide="x" class="w-3 h-3"></i>';
+                    removeBtn.title = 'Hapus dari pilihan';
+                    removeBtn.addEventListener('click', () => {
+                        const idx = selectedTemplatePrompts.indexOf(t.prompt);
+                        if (idx > -1) {
+                            selectedTemplatePrompts.splice(idx, 1);
+                            // sinkronkan state tombol di modal
+                            const btn = document.querySelector(`.template-btn[data-prompt="${CSS.escape(t.prompt)}"]`);
+                            if (btn) {
+                                btn.classList.remove('ring-blue-500');
+                                btn.classList.add('ring-transparent');
+                                btn.classList.remove('border-blue-400');
+                                btn.classList.add('border-slate-200');
+                            }
+                            renderSelectedTemplatesList();
+                            updateSelectedTemplateCount();
+                        }
+                    });
+                    item.appendChild(title);
+                    item.appendChild(removeBtn);
+                    selectedTemplatesContainer.appendChild(item);
+                });
+                // update icons
+                if (window.lucide && typeof lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
+            }
+
+            function updateSelectedTemplateCount() {
+                const count = selectedTemplatePrompts.length;
+                if (selectedTemplatesCount) selectedTemplatesCount.textContent = `${count} template dipilih`;
+                if (templateSelectedInfo) templateSelectedInfo.textContent = `Dipilih: ${count} template`;
+            }
+
+            function openTemplateModal() {
+                if (templateModal) templateModal.classList.remove('hidden');
+            }
+            function closeTemplateModal() {
+                if (templateModal) templateModal.classList.add('hidden');
+            }
+
+            function applyTemplateViewMode() {
+                if (!templateButtonsContainer) return;
+                if (templateViewMode === 'grid') {
+                    templateButtonsContainer.className = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4';
+                    if (templateViewToggle) templateViewToggle.innerHTML = '<i data-lucide="layout-grid" class="w-4 h-4"></i>';
+                } else {
+                    templateButtonsContainer.className = 'flex flex-col gap-2';
+                    if (templateViewToggle) templateViewToggle.innerHTML = '<i data-lucide="list" class="w-4 h-4"></i>';
+                }
+                if (window.lucide && typeof lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
+            }
+
+            // Util: append teks dengan highlight tanpa innerHTML berbahaya
+            function appendHighlighted(container, text, query) {
+                const safeText = String(text || '');
+                if (!query) {
+                    container.textContent = safeText;
+                    return;
+                }
+                const lower = safeText.toLowerCase();
+                const idx = lower.indexOf(query);
+                if (idx === -1) {
+                    container.textContent = safeText;
+                    return;
+                }
+                const before = safeText.slice(0, idx);
+                const match = safeText.slice(idx, idx + query.length);
+                const after = safeText.slice(idx + query.length);
+                if (before) container.appendChild(document.createTextNode(before));
+                const mark = document.createElement('mark');
+                mark.className = 'bg-yellow-200 rounded px-1';
+                mark.textContent = match;
+                container.appendChild(mark);
+                if (after) container.appendChild(document.createTextNode(after));
+            }
+
+            // Util: hanya fokus di desktop untuk mencegah keyboard muncul di mobile
+            function safeFocus(el) {
+                try {
+                    if (!el) return;
+                    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+                    const isFinePointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+                    if (isTouch || !isFinePointer) return; // jangan fokus di perangkat sentuh/coarse pointer
+                    el.focus();
+                } catch (_) { /* no-op */ }
+            }
+
+            // Scroll independen: cegah bubbling antar container
+            function setupIndependentScroll(el) {
+                if (!el) return;
+                try {
+                    // CSS sudah overscroll-contain; tambah pencegahan event bubbling
+                    el.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
+                    el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: true });
+                } catch (_) { /* no-op */ }
             }
 
             async function updateCard(card, finalPrompt, base64) {
@@ -1003,7 +2116,10 @@
                             base64: base64,
                             timestamp: new Date().getTime()
                         };
-                        await saveImageToHistory(historyItem);
+                        const shouldSaveHistory = !(currentMode === 'list' && listDisableHistory && listDisableHistory.checked);
+                        if (shouldSaveHistory) {
+                            await saveImageToHistory(historyItem);
+                        }
                     } catch (err) {
                         console.error("Gagal menyimpan ke riwayat:", err);
                         showMessage("Gagal menyimpan ke riwayat.", "error");
@@ -1050,14 +2166,21 @@
                 
                 showMessage(`Menghasilkan ${imageCount} gambar...`, 'info');
 
-                const placeholderCards = prompts.map((prompt, i) => {
-                    const card = createPlaceholderCard(useOptimizer ? 'Mengoptimasi...' : originalPrompt, i);
-                    outputGrid.appendChild(card);
-                    generatedImages[i] = null; // Set placeholder di array global
-                    return { card, prompt };
-                });
+                    const placeholderCards = prompts.map((prompt, i) => {
+                        const card = createPlaceholderCard(useOptimizer ? 'Mengoptimasi...' : originalPrompt, i);
+                        outputGrid.appendChild(card);
+                        generatedImages[i] = null; // Set placeholder di array global
+                        return { card, prompt };
+                    });
+
+                    // Render ikon Lucide untuk kartu yang baru ditambahkan
+                    if (window.lucide && typeof lucide.createIcons === 'function') {
+                        lucide.createIcons();
+                    }
 
                 await Promise.allSettled(placeholderCards.map(async ({ card, prompt }) => {
+                    // Log penggunaan prompt (mode single)
+                    logPromptToSupabase('single', prompt);
                     try {
                         const base64 = await generateImage(prompt, aspectRatio, subjectRefs, styleRefs);
                         if (!base64) throw new Error("API tidak mengembalikan gambar.");
@@ -1097,6 +2220,9 @@
                 }
 
                 try {
+                    // Log penggunaan prompt saat regenerate memakai mode terpilih sekarang
+                    const currentModeValue = document.querySelector('input[name="mode"]:checked')?.value || 'unknown';
+                    logPromptToSupabase(currentModeValue, finalPrompt);
                     const base64 = await generateImage(finalPrompt, aspectRatio, subjectReferenceBase64s, styleReferenceBase64s);
                     if (!base64) throw new Error("API tidak mengembalikan gambar.");
                     await updateCard(card, finalPrompt, base64);
@@ -1124,23 +2250,27 @@
                         if (index > -1) {
                             selectedTemplatePrompts.splice(index, 1);
                         }
-                        btn.classList.replace('bg-blue-500', 'bg-slate-200');
-                        btn.classList.remove('text-white');
-                        btn.classList.add('text-slate-800');
+                        btn.classList.remove('ring-blue-500');
+                        btn.classList.add('ring-transparent');
+                        btn.classList.remove('border-blue-400');
+                        btn.classList.add('border-slate-200');
                     } else {
                         // Pilih semua
                         if (index === -1) {
                             selectedTemplatePrompts.push(prompt);
                         }
-                        btn.classList.replace('bg-slate-200', 'bg-blue-500');
-                        btn.classList.add('text-white');
-                        btn.classList.remove('text-slate-800');
+                        btn.classList.add('ring-blue-500');
+                        btn.classList.remove('ring-transparent');
+                        btn.classList.remove('border-slate-200');
+                        btn.classList.add('border-blue-400');
                     }
                 });
 
                 const message = allSelected ? `Membatalkan pilihan Kategori "${category}".` : `Memilih semua Kategori "${category}".`;
                 showMessage(message, 'info');
-                inputs.single.focus();
+                safeFocus(inputs.single);
+                renderSelectedTemplatesList();
+                updateSelectedTemplateCount();
             }
 
             // (DIMODIFIKASI) Fungsi-fungsi untuk Mode List
@@ -1151,6 +2281,9 @@
                 }
                 isBatchRunning = true;
                 currentBatchIndex = 0;
+                // Reset dan baca batas pengulangan
+                listRepeatCounter = 0;
+                listRepeatLimit = parseInt(listRepeatCountInput?.value, 10) || 0; // 0 = unlimited
                 generateBtnText.textContent = 'Hentikan Batch';
                 generateBtn.classList.remove('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
                 generateBtn.classList.add('from-red-500', 'to-red-600', 'hover:from-red-600', 'hover:to-red-700');
@@ -1223,8 +2356,15 @@
                     batchPlaceholders.push(card);
                 }
 
+                // Render ikon Lucide untuk kartu batch yang baru ditambahkan
+                if (window.lucide && typeof lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
+
                 // Proses semua gambar untuk prompt ini
                 await Promise.allSettled(batchPlaceholders.map(async (card) => {
+                    // Log penggunaan prompt (mode list)
+                    logPromptToSupabase('list', originalPrompt);
                     try {
                         const base64 = await generateImage(originalPrompt, aspectRatio, [], styleReferenceBase64s); 
                         if (!base64) throw new Error("API tidak mengembalikan gambar.");
@@ -1241,9 +2381,22 @@
                 // Cek apakah batch selesai atau perlu diulang
                 if (currentBatchIndex >= fetchedListPrompts.length) {
                     if (listRepeat.checked) {
+                        // Hitung pengulangan; 0 = unlimited
+                        if (listRepeatLimit > 0) {
+                            listRepeatCounter += 1;
+                            if (listRepeatCounter >= listRepeatLimit) {
+                                showMessage(`Batch selesai sesuai jumlah pengulangan (${listRepeatLimit}).`, 'success');
+                                stopBatchGeneration();
+                                return;
+                            } else {
+                                showMessage(`Batch selesai. Mengulang ke awal (${listRepeatCounter}/${listRepeatLimit}).`, 'info');
+                            }
+                        } else {
+                            showMessage("Batch selesai. Mengulang tanpa batas...", 'info');
+                        }
+
                         currentBatchIndex = 0;
-                        showMessage("Batch Selesai. Mengulang dari awal...", 'info');
-                        
+
                         // (BARU) Logika Sinkronisasi Otomatis
                         if (listAutoSync.checked) {
                             showMessage("Sinkronisasi otomatis: Memuat data baru dari G-Sheet...", 'info');
@@ -1256,7 +2409,6 @@
                         }
                     } else {
                         showMessage("Batch selesai!", 'success');
-                        // (DITAMBAHKAN) Hentikan batch setelah selesai
                         stopBatchGeneration();
                         return; // Keluar dari fungsi
                     }
@@ -1367,8 +2519,15 @@
                                 return { card, prompt };
                             });
 
+                            // Render ikon Lucide untuk kartu template yang baru ditambahkan
+                            if (window.lucide && typeof lucide.createIcons === 'function') {
+                                lucide.createIcons();
+                            }
+                            
                             // Jalankan generasi untuk batch kartu ini
                             await Promise.allSettled(placeholderCards.map(async ({ card, prompt }) => {
+                                // Log penggunaan prompt (mode template)
+                                logPromptToSupabase('template', prompt);
                                 try {
                                     const base64 = await generateImage(prompt, aspectRatio, subjectRefs, styleRefs);
                                     if (!base64) throw new Error("API tidak mengembalikan gambar.");
@@ -1423,21 +2582,21 @@
                         <!-- Download -->
                         <div class="relative group/btn">
                             <button class="download-single-btn p-2 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg transition-colors disabled:bg-slate-400 active:scale-95" disabled title="Download Image">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                <i data-lucide="download" class="w-4 h-4"></i>
                             </button>
                             <span class="absolute z-10 right-full top-1/2 -translate-y-1/2 mr-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Unduh</span>
                         </div>
                         <!-- Regenerate -->
                         <div class="relative group/btn">
                             <button class="regenerate-btn p-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-colors disabled:bg-slate-400 active:scale-95" disabled title="Regenerate">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.22c0-2.6-1.4-5-3.6-6.2.9-.3 1.9-.3 2.8 0l-4.4 4.4c-.9.9-2.3.9-3.2 0L9.4 7.2C8.5 6.3 7 6.3 6.1 7.2L1.7 11.6c-.9.9-.9 2.3 0 3.2l4.4 4.4c.9.9 2.3.9 3.2 0l1-1m5.2-1.9-4.4-4.4c-.9-.9-2.3-.9-3.2 0L7.2 13.3c-.9.9-.9 2.3 0 3.2l4.4 4.4c.9.9 2.3.9 3.2 0l4.4-4.4c.9-.9.9-2.3 0-3.2Z"/></svg>
+                                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                             </button>
                             <span class="absolute z-10 right-full top-1/2 -translate-y-1/2 mr-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Regenerate</span>
                         </div>
                         <!-- Copy Prompt -->
                         <div class="relative group/btn">
                             <button class="copy-prompt-btn p-2 rounded-full bg-slate-50 hover:bg-slate-200 text-slate-700 shadow-lg transition-colors disabled:bg-slate-400 active:scale-95" disabled title="Copy Prompt">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                <i data-lucide="copy" class="w-4 h-4"></i>
                             </button>
                             <span class="absolute z-10 right-full top-1/2 -translate-y-1/2 mr-2 p-1 px-2 text-xs font-medium text-white bg-slate-800 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Salin Prompt</span>
                         </div>
@@ -1525,18 +2684,22 @@
 
                 if (index > -1) { // Jika sudah ada, hapus (deselect)
                     selectedTemplatePrompts.splice(index, 1);
-                    btn.classList.replace('bg-blue-500', 'bg-slate-200');
-                    btn.classList.remove('text-white');
-                    btn.classList.add('text-slate-800');
+                    btn.classList.remove('ring-blue-500');
+                    btn.classList.add('ring-transparent');
+                    btn.classList.remove('border-blue-400');
+                    btn.classList.add('border-slate-200');
                 } else { // Jika belum ada, tambahkan (select)
                     selectedTemplatePrompts.push(prompt);
-                    btn.classList.replace('bg-slate-200', 'bg-blue-500');
-                    btn.classList.add('text-white');
-                    btn.classList.remove('text-slate-800');
+                    btn.classList.add('ring-blue-500');
+                    btn.classList.remove('ring-transparent');
+                    btn.classList.remove('border-slate-200');
+                    btn.classList.add('border-blue-400');
                 }
                 
                 showMessage(`Anda telah memilih ${selectedTemplatePrompts.length} template.`, 'info');
-                inputs.single.focus();
+                safeFocus(inputs.single);
+                renderSelectedTemplatesList();
+                updateSelectedTemplateCount();
             }
 
             // === EVENT LISTENERS ===
@@ -1557,6 +2720,47 @@
                 }
             });
 
+            // (BARU) Tombol Deselect semua pilihan
+            if (templateDeselectAllBtn) {
+                templateDeselectAllBtn.addEventListener('click', () => {
+                    if (selectedTemplatePrompts.length === 0) return;
+                    selectedTemplatePrompts = [];
+                    document.querySelectorAll('.template-btn').forEach(btn => {
+                        btn.classList.remove('ring-blue-500');
+                        btn.classList.add('ring-transparent');
+                        btn.classList.remove('border-blue-400');
+                        btn.classList.add('border-slate-200');
+                    });
+                    renderSelectedTemplatesList();
+                    updateSelectedTemplateCount();
+                    showMessage('Semua pilihan dihapus.', 'info');
+                });
+            }
+
+            // (BARU) Pencarian Template Client-side
+            if (templateSearchInput) {
+                templateSearchInput.addEventListener('input', () => {
+                    const q = templateSearchInput.value || '';
+                    const cat = templateCategoryFilter ? templateCategoryFilter.value : '';
+                    renderTemplateButtons(fetchedTemplates, q, cat);
+                });
+            }
+            if (templateSearchClearBtn) {
+                templateSearchClearBtn.addEventListener('click', () => {
+                    templateSearchInput.value = '';
+                    const cat = templateCategoryFilter ? templateCategoryFilter.value : '';
+                    renderTemplateButtons(fetchedTemplates, '', cat);
+                    safeFocus(templateSearchInput);
+                });
+            }
+
+            if (templateCategoryFilter) {
+                templateCategoryFilter.addEventListener('change', () => {
+                    const q = templateSearchInput ? (templateSearchInput.value || '') : '';
+                    renderTemplateButtons(fetchedTemplates, q, templateCategoryFilter.value);
+                });
+            }
+
             // (BARU) Tipe Interval (Statis/Random)
             listIntervalType.addEventListener('change', (e) => {
                 if (e.target.value === 'random') {
@@ -1569,14 +2773,17 @@
             });
 
             // Referensi Subjek & Gaya
-            uploadSubject.addEventListener('change', (e) => handleImageUpload(e, subjectReferenceBase64s, subjectPreviewContainer, clearSubjectBtn));
-            clearSubjectBtn.addEventListener('click', () => clearImageReferences(subjectReferenceBase64s, uploadSubject, subjectPreviewContainer, clearSubjectBtn));
+            uploadSubject.addEventListener('change', handleSubjectUploadWithCrop);
+            clearSubjectBtn.addEventListener('click', clearSubjectReferences);
             uploadStyle.addEventListener('change', (e) => handleImageUpload(e, styleReferenceBase64s, stylePreviewContainer, clearStyleBtn));
             clearStyleBtn.addEventListener('click', () => clearImageReferences(styleReferenceBase64s, uploadStyle, stylePreviewContainer, clearStyleBtn));
             
             // Tombol Utama
             generateBtn.addEventListener('click', handleGenerateClick);
             downloadBtn.addEventListener('click', handleDownloadZip);
+            if (clearHistoryBtn) {
+                clearHistoryBtn.addEventListener('click', () => clearHistory());
+            }
 
             // Navigasi Tampilan (Canvas/History)
             canvasViewTitle.addEventListener('click', () => switchView('canvas'));
@@ -1595,6 +2802,24 @@
 
             // (DIMODIFIKASI) Logika Mode Template & List
             syncTemplatesBtn.addEventListener('click', fetchAndRenderTemplates);
+
+            // Modal Template
+            if (openTemplateModalBtn) openTemplateModalBtn.addEventListener('click', openTemplateModal);
+            if (closeTemplateModalBtn) closeTemplateModalBtn.addEventListener('click', closeTemplateModal);
+            if (closeTemplateModalBottom) closeTemplateModalBottom.addEventListener('click', closeTemplateModal);
+            if (templateModal) {
+                templateModal.addEventListener('click', (e) => { if (e.target === templateModal) closeTemplateModal(); });
+            }
+            if (templateViewToggle) {
+                templateViewToggle.addEventListener('click', () => {
+                    templateViewMode = templateViewMode === 'grid' ? 'list' : 'grid';
+                    applyTemplateViewMode();
+                    // Re-render agar konten item menyesuaikan mode (thumbnail-only vs list)
+                    const q = templateSearchInput ? (templateSearchInput.value || '') : '';
+                    const cat = templateCategoryFilter ? (templateCategoryFilter.value || '') : '';
+                    renderTemplateButtons(fetchedTemplates, q, cat);
+                });
+            }
             
             // (BARU) Logika Mode List
             const savedListUrl = localStorage.getItem(LIST_URL_KEY);
@@ -1617,6 +2842,9 @@
                 if (currentView === 'history') {
                     switchView('history'); 
                 }
+                // Inisialisasi scroll independen untuk kedua area modal template
+                setupIndependentScroll(templateLeftScroll);
+                setupIndependentScroll(templateRightScroll);
             }).catch(err => {
                 console.error("Inisialisasi IndexedDB gagal:", err);
                 showMessage("Gagal memuat database riwayat.", 'error');
@@ -1624,6 +2852,8 @@
             
             fetchAndRenderTemplates(); // Muat template saat halaman dibuka
             fetchListPrompts(); // Muat daftar list saat halaman dibuka (jika URL tersimpan)
+            renderSelectedTemplatesList();
+            updateSelectedTemplateCount();
         });
     </script>
 </body>
