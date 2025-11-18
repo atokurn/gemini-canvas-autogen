@@ -2091,19 +2091,17 @@
                 }
             }
             function buildPreviewSequence() {
-                previewSequence = [];
+                const gen = [];
                 for (let i = 0; i < generatedImages.length; i++) {
                     const gi = generatedImages[i];
-                    if (gi && gi.base64) {
-                        previewSequence.push({ source: 'generated', index: i, id: gi.id, createdAt: gi.createdAt || 0, base64: gi.base64 });
-                    }
+                    if (gi && gi.base64) gen.push({ source: 'generated', index: i, id: gi.id, createdAt: gi.createdAt || 0, base64: gi.base64 });
                 }
-                for (let i = loadedHistory.length - 1; i >= 0; i--) {
+                const hist = [];
+                for (let i = 0; i < loadedHistory.length; i++) {
                     const hi = loadedHistory[i];
-                    if (hi && hi.base64) {
-                        previewSequence.push({ source: 'history', index: i, id: hi.id || `hist_${hi.timestamp || i}`, createdAt: hi.timestamp || 0, base64: hi.base64 });
-                    }
+                    if (hi && hi.base64) hist.push({ source: 'history', index: i, id: hi.id || `hist_${hi.timestamp || i}`, createdAt: hi.timestamp || 0, base64: hi.base64 });
                 }
+                previewSequence = gen.concat(hist).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
             }
 
             function updatePreviewDisplay() {
